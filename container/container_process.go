@@ -1,11 +1,14 @@
 package container
 
 import (
+	"encoding/base32"
 	"fmt"
 	log "github.com/sirupsen/logrus"
+	"math/rand"
 	"os"
 	"os/exec"
 	"syscall"
+	"time"
 )
 
 /*
@@ -22,6 +25,26 @@ func NewPipe() (*os.File, *os.File, error) {
 	}
 	return reader, writer, nil
 }
+
+
+/*
+生成 10 位的随机 id
+ */
+func NewId() string {
+	letterBytes := "1234567890"
+	rand.Seed(time.Now().UnixNano())
+	b := make([]byte, 10)
+	for i := range b {
+		b[i] = letterBytes[rand.Intn(len(letterBytes))]
+	}
+	return string(b)
+}
+
+func Encode(b []byte) string {
+	return base32.StdEncoding.EncodeToString(b)
+}
+
+
 /*
 该函数父进程，也就是当前进程执行的内容，
 1. ／proc/self/exe 调用，／proc/self／ 指的是当前运行进程自己的环境，exec其实就是自己调用了自己，使用这种方式对创建出来的进程进行初始化
@@ -39,7 +62,7 @@ func NewParentProcess() (*exec.Cmd, error) {
 
 	// 获取当前程序， /proc/self/exec 也就是当前执行的程序
 	// 在子进程中执行 /proc/self/exec 也就是子进程执行当前程序
-	initCmd, err := os.Readlink("/proc/self/exec")
+	initCmd, err := os.Readlink("/proc/self/exe")
 	if err != nil {
 		log.Errorf("get init process error %v", err)
 		return nil, nil
@@ -51,7 +74,14 @@ func NewParentProcess() (*exec.Cmd, error) {
 
 	// 设置 CLONE Flag，（Namespace）
 	cmd.SysProcAttr = &syscall.SysProcAttr{
-		CloneFlag: syscall.CLONE_NEWUTS,
+		Cloneflags: syscall.CLONE_NEWUTS,
 	}
+
+	// 从镜像构造容器
+	id := NewId()
+	id_base := Encode([]byte(id))
+	
+
+	
 	return nil,nil
 }

@@ -32,7 +32,7 @@ var RunCommand = &cli.Command{
 
 		var cmdArray []string
 
-		for i := 0; i < context.NArg()-1; i++ {
+		for i := 0; i < context.NArg(); i++ {
 			cmdArray = append(cmdArray, context.Args().Get(i))
 		}
 
