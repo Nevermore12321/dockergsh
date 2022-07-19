@@ -1,4 +1,4 @@
-module my-docker
+module github.com/Nevermore12321/dockergsh
 
 go 1.17
 

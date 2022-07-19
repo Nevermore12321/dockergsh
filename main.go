@@ -3,7 +3,7 @@ package main
 import (
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
-	cmd "my-docker/command"
+	cmd "github.com/Nevermore12321/dockergsh/command"
 	"os"
 )
 

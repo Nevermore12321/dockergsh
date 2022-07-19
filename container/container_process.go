@@ -1,47 +1,27 @@
 package container
 
 import (
-	"encoding/base32"
 	"fmt"
 	log "github.com/sirupsen/logrus"
-	"math/rand"
 	"os"
 	"os/exec"
 	"syscall"
-	"time"
+
+	"github.com/Nevermore12321/dockergsh/utils"
 )
 
-/*
-创建一个管道
-返回：
-- 只读管道 - *os.File
-- 只写管道 - *os.File
-- err - error
- */
-func NewPipe() (*os.File, *os.File, error) {
-	reader, writer, err := os.Pipe()
-	if err != nil {
-		return nil, nil, err
-	}
-	return reader, writer, nil
-}
+// 全局环境变量
+var (
+	DefaultInfoLocation string = "/var/run/dockergsh/%s/"
+	ContainerLogFile    string = "container.log"
+)
 
-
-/*
-生成 10 位的随机 id
- */
-func NewId() string {
-	letterBytes := "1234567890"
-	rand.Seed(time.Now().UnixNano())
-	b := make([]byte, 10)
-	for i := range b {
-		b[i] = letterBytes[rand.Intn(len(letterBytes))]
-	}
-	return string(b)
-}
-
-func Encode(b []byte) string {
-	return base32.StdEncoding.EncodeToString(b)
+// container init 进程的信息 结构体
+type ContainerInit struct {
+	Id       string
+	IdBase   string
+	ImageUrl string
+	RootUrl  string
 }
 
 
@@ -51,13 +31,18 @@ func Encode(b []byte) string {
 2. 后面的 args 是参数，其中 init 是传递给本进程的第一个参数，在本例中，其实就是会去调用 initCommand去初始化进程的一些环境和资源
 3. 下面的 clone 参数就是去 fork 出来一个新进程，并且使用了 namespace 隔离新创建的进程和外部环境。
 4. 如果用户指定了 －it 参数，就需要把当前进程的输入输出导入到标准输入输出上
- */
-func NewParentProcess() (*exec.Cmd, error) {
+
+该函数最终返回:
+- ContainerInit 容器初始化的结构体
+- exec.Cmd 命令结构体
+- os.File 一个写管道
+*/
+func NewParentProcess(tty bool) (*ContainerInit, *exec.Cmd, *os.File) {
 	// 初始化管道
-	readPipe, writerPipe, err := NewPipe()
+	readPipe, writerPipe, err := utils.NewPipe()
 	if err != nil {
 		log.Errorf("New pipe err: %v", err)
-		return nil, nil
+		return nil, nil, nil
 	}
 
 	// 获取当前程序， /proc/self/exec 也就是当前执行的程序
@@ -65,10 +50,11 @@ func NewParentProcess() (*exec.Cmd, error) {
 	initCmd, err := os.Readlink("/proc/self/exe")
 	if err != nil {
 		log.Errorf("get init process error %v", err)
-		return nil, nil
+		return nil, nil, nil
 	}
 
 	// 通过 os/exec 来 fork 一个子进程并且 执行当前程序，传入 init 参数
+	// 也就是在子进程中执行 dockergsh init
 	cmd := exec.Command(initCmd, "init")
 	fmt.Println(cmd, readPipe, writerPipe)
 
@@ -77,11 +63,42 @@ func NewParentProcess() (*exec.Cmd, error) {
 		Cloneflags: syscall.CLONE_NEWUTS,
 	}
 
-	// 从镜像构造容器
-	id := NewId()
-	id_base := Encode([]byte(id))
-	
+	// todo 从镜像构造容器
+	id := utils.NewId()
+	idBase := utils.Encode([]byte(id))
 
-	
-	return nil,nil
+	// 构造容器的日志
+	if tty { // 如果是 -it 选项，那么需要将输入输出都重定向到 标准输入输出
+		cmd.Stdout = os.Stdout
+		cmd.Stdin = os.Stdin
+		cmd.Stderr = os.Stderr
+	} else { // 否则，则是 -d 模式，生成容器对应日志目录
+		// 创建日志目录，日志目录为  /var/run/dockergsh/contain_id/
+		dirURL := fmt.Sprintf(DefaultInfoLocation, id)
+		if err := os.MkdirAll(dirURL, 0622); err != nil && os.IsExist(err) {
+			log.Errorf("NewParentProcess mkdir %s error %v", dirURL, err)
+			return nil, nil, nil
+		}
+
+		// 创建日志文件，/var/run/dockergsh/contain_id/container.log
+		stdLogFileAbsPath := dirURL + ContainerLogFile
+		stdLogFile, err := os.OpenFile(stdLogFileAbsPath, os.O_CREATE|os.O_WRONLY|os.O_SYNC|os.O_APPEND, 0755)
+		if err != nil {
+			log.Errorf("NewParentProcess create file %s error %v", stdLogFileAbsPath, err)
+			return nil, nil, nil
+		}
+
+		// 将容器的 输出/错误 重定向到 日志文件
+		cmd.Stdout = stdLogFile
+		cmd.Stderr = stdLogFile
+	}
+
+	// todo 添加 image 信息
+	return &ContainerInit{Id: id, IdBase: idBase}, cmd, writerPipe
+}
+
+func RunContainerInitProcess() error {
+	// todo 容器的初始化 init 进程
+	fmt.Println("test")
+	return nil
 }

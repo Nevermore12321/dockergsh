@@ -5,7 +5,8 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 
-	"my-docker/container"
+	"github.com/Nevermore12321/dockergsh/cmdExec"
+	"github.com/Nevermore12321/dockergsh/container"
 )
 
 // 定义了 docker run 命令的 RunCommand 的所有 Flags，也就是用 -- 来指定的选项
@@ -50,12 +51,7 @@ var RunCommand = &cli.Command{
 			return fmt.Errorf("-it and -d paramter can not both provided")
 		}
 
-		
-
-
-
-		_, err := container.NewParentProcess()
-		fmt.Println(err)
+		cmdExec.Run(tty, cmdArray)
 
 		return nil
 	},
@@ -75,8 +71,7 @@ var InitCommand = &cli.Command{
 		log.Infof("init come on")
 		cmd := context.Args().Get(0)
 		log.Infof("Command %s", cmd)
-		// todo
-		//err := container.RunContainerInitProcess()
-		return nil
+		err := container.RunContainerInitProcess()
+		return err
 	},
 }
