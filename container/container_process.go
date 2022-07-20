@@ -38,7 +38,7 @@ type ContainerInit struct {
 - os.File 一个写管道
 */
 func NewParentProcess(tty bool) (*ContainerInit, *exec.Cmd, *os.File) {
-	// 初始化管道
+	// 初始化管道, 父进程通过管道，将子进程运行的参数传过去
 	readPipe, writerPipe, err := utils.NewPipe()
 	if err != nil {
 		log.Errorf("New pipe err: %v", err)
@@ -56,11 +56,14 @@ func NewParentProcess(tty bool) (*ContainerInit, *exec.Cmd, *os.File) {
 	// 通过 os/exec 来 fork 一个子进程并且 执行当前程序，传入 init 参数
 	// 也就是在子进程中执行 dockergsh init
 	cmd := exec.Command(initCmd, "init")
+
+	// 在子进程中，添加一个文件描述符. 除了 012， 那么该 readPipe 的文件描述符为 3
+	cmd.ExtraFiles = []*os.File{readPipe}
 	fmt.Println(cmd, readPipe, writerPipe)
 
 	// 设置 CLONE Flag，（Namespace）
 	cmd.SysProcAttr = &syscall.SysProcAttr{
-		Cloneflags: syscall.CLONE_NEWUTS,
+		Cloneflags: syscall.CLONE_NEWUTS | syscall.CLONE_NEWPID | syscall.CLONE_NEWNS | syscall.CLONE_NEWNET | syscall.CLONE_NEWIPC,
 	}
 
 	// todo 从镜像构造容器
@@ -97,8 +100,3 @@ func NewParentProcess(tty bool) (*ContainerInit, *exec.Cmd, *os.File) {
 	return &ContainerInit{Id: id, IdBase: idBase}, cmd, writerPipe
 }
 
-func RunContainerInitProcess() error {
-	// todo 容器的初始化 init 进程
-	fmt.Println("test")
-	return nil
-}

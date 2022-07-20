@@ -1,13 +1,13 @@
 package main
 
 import (
+	cmd "github.com/Nevermore12321/dockergsh/command"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
-	cmd "github.com/Nevermore12321/dockergsh/command"
 	"os"
 )
 
-const usage = `mydocker is a simple container runtime implementation.
+const usage = `dockergsh is a simple container runtime implementation.
 			   The purpose of this project is to learn how docker works and how to write a docker by ourselves
 			   Enjoy it, just for fun.`
 
@@ -18,7 +18,7 @@ func main() {
 	log.Println(usage)
 
 	// 配置命令行 app
-	app.Name = "mydoceker"
+	app.Name = "dockergsh"
 	app.Usage = usage
 	app.Commands = []*cli.Command{
 		cmd.InitCommand,

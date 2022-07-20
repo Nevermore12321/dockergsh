@@ -3,6 +3,8 @@ package cmdExec
 import (
 	"fmt"
 	log "github.com/sirupsen/logrus"
+	"os"
+	"strings"
 
 	"github.com/Nevermore12321/dockergsh/container"
 )
@@ -26,12 +28,14 @@ func Run(tty bool, commandArray []string) {
 	}
 
 	// todo
+	// record container info
 	// 开启cgroup
 	// 检查版本
-
-	// todo 像容器中发送 所有的命令选项
 	fmt.Println(containerInit)
-	fmt.Println(writePipe)
+
+	// 父进程向容器中发送 所有的命令选项
+	sendInitCommand(commandArray, writePipe)
+
 
 	// 如果是 -it 伪终端模式，那么需要监听，如果退出，需要释放容器资源
 	if tty {
@@ -40,5 +44,22 @@ func Run(tty bool, commandArray []string) {
 		}
 
 		// todo 停止容器
+	}
+}
+
+
+// 向管道中发送消息
+// 也就是父进程通过管道向子进程（容器）中发送命令行选项
+func sendInitCommand(comArray []string, writePipe *os.File) {
+	// 把所有选项通过空格分割
+	commandOpt := strings.Join(comArray, " ")
+	log.Infof("Send command to init container: %s", commandOpt)
+	_, err := writePipe.WriteString(commandOpt)
+	if err != nil {
+		log.Warnf("Send command Opt to container init failed: %s", err)
+	}
+	err = writePipe.Close()
+	if err != nil {
+		log.Warnf("Pipe close failed: %s", err)
 	}
 }
