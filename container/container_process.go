@@ -56,6 +56,7 @@ func NewParentProcess(tty bool) (*ContainerInit, *exec.Cmd, *os.File) {
 	// 通过 os/exec 来 fork 一个子进程并且 执行当前程序，传入 init 参数
 	// 也就是在子进程中执行 dockergsh init
 	cmd := exec.Command(initCmd, "init")
+	//cmd := exec.Command("/proc/self/exe", "init")
 
 	// 在子进程中，添加一个文件描述符. 除了 012， 那么该 readPipe 的文件描述符为 3
 	cmd.ExtraFiles = []*os.File{readPipe}

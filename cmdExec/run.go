@@ -2,14 +2,17 @@ package cmdExec
 
 import (
 	"fmt"
+	"github.com/Nevermore12321/dockergsh/cgroup"
+	"github.com/Nevermore12321/dockergsh/cgroup/subsystem"
 	log "github.com/sirupsen/logrus"
 	"os"
+	"os/exec"
 	"strings"
 
 	"github.com/Nevermore12321/dockergsh/container"
 )
 
-func Run(tty bool, commandArray []string) {
+func Run(tty bool, commandArray []string, resConf *subsystem.ResourceConfig) {
 	// containerInit 包含容器初始化时需要记录的一些信息
 	// todo 添加镜像 挂载 等参数
 	containerInit, parentCmd, writePipe := container.NewParentProcess(tty)
@@ -24,14 +27,48 @@ func Run(tty bool, commandArray []string) {
 	3. 注意，子进程执行 ／proc/self/exe ，也就是说要让子进程成为 container 中的 init 程序，需要注意 init 程序不能退出
 	 */
 	if err:= parentCmd.Start(); err != nil {
-		log.Errorf("New parent process error: %v", err)
+		log.Errorf("new parent process error: %v", err)
 	}
 
 	// todo
 	// record container info
+	fmt.Println(containerInit)
+
 	// 开启cgroup
 	// 检查版本
-	fmt.Println(containerInit)
+	_, err := exec.Command("grep", "cgroup2", "/proc/filesystems").CombinedOutput()
+	if err != nil {		// cgroup v1
+		// use dockergsh as cgroup name
+		cgroupManager := cgroup.NewCgroupManager("dockergsh")
+		//  如果以 -it 启动容器，那么退出时，直接删除 cgroup
+		if tty {
+			defer cgroupManager.DestroyV1()
+		}
+		// 设置资源限制
+		if err := cgroupManager.SetV1(resConf); err != nil {
+			log.Errorf("set cgroup resource failed: %v", err)
+		}
+		// 将容器进程 pid 加入到 cgroup 中
+		if err = cgroupManager.ApplyV1(parentCmd.Process.Pid); err != nil {
+			log.Errorf("add process to cgroup failed: %v", err)
+		}
+	} else {		// cgroup v2
+		// use dockergsh as cgroup name
+		cgroupManager := cgroup.NewCgroupManager("dockergsh")
+		//  如果以 -it 启动容器，那么退出时，直接删除 cgroup
+		if tty {
+			defer cgroupManager.DestroyV2()
+		}
+		// 设置资源限制
+		if err := cgroupManager.SetV2(resConf); err != nil {
+			log.Errorf("set cgroup resource failed: %v", err)
+		}
+		// 将容器进程 pid 加入到 cgroup 中
+		if err = cgroupManager.ApplyV2(parentCmd.Process.Pid); err != nil {
+			log.Errorf("add process to cgroup failed: %v", err)
+		}
+	}
+
 
 	// 父进程向容器中发送 所有的命令选项
 	sendInitCommand(commandArray, writePipe)
