@@ -60,6 +60,8 @@ func NewParentProcess(tty bool) (*ContainerInit, *exec.Cmd, *os.File) {
 
 	// 在子进程中，添加一个文件描述符. 除了 012， 那么该 readPipe 的文件描述符为 3
 	cmd.ExtraFiles = []*os.File{readPipe}
+	// 指定 命令的 工作目录
+	cmd.Dir = "/root/dockergsh/busybox"
 	fmt.Println(cmd, readPipe, writerPipe)
 
 	// 设置 CLONE Flag，（Namespace）

@@ -98,3 +98,19 @@ root@ubuntu:~# cat /proc/self/cgroup
 
 ![cgroup的流程图](https://github.com/Nevermore12321/LeetCode/blob/blog/%E4%BA%91%E8%AE%A1%E7%AE%97/docker/Cgroup%E7%9A%84%E5%88%9B%E5%BB%BA%E4%B8%8E%E4%BF%AE%E6%94%B9.PNG?raw=true)
 
+
+#### 构造镜像
+
+**使用 pivot_root 系统调用：**
+- pivot_root 是一个系统调用，主要功能是去改变当前的root文件系统。
+- pivot_root 可以将当前进程的 root 文件系统移动到 put_old 文件夹中，然后使 new_root 成为新的 root 文件系统。
+  - new_root 和 put_old 必须不能同时存在当前 root 的同一个文件系统中。
+- pivot_root 和 chroot 的主要区别是:
+  - pivot_root 是把整个系统切换到一个新的 root 目录，而移除对之前 root 文件系统的依赖，这样你就能够 umount 原先的 root 文件系统。
+  - chroot 是针对某个进程，系统的其他部分依旧运行于老的 root 目录中。
+
+pivot_root: 改变root文件系统
+    - pivot_root把当前进程的root文件系统放到put_old目录，而使new_root成为新的root文件系统。
+```shell
+pivot_root(new_root,put_old)
+```

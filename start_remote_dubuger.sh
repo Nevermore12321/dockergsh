@@ -1,5 +1,6 @@
 #!/bin/sh
 
+go build -gcflags="all=-N -l" -o main
 parameters="--"
 while  [ $# -gt 0 ]
 do
