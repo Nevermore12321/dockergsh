@@ -12,10 +12,10 @@ import (
 	"github.com/Nevermore12321/dockergsh/container"
 )
 
-func Run(tty bool, commandArray []string, resConf *subsystem.ResourceConfig) {
+func Run(tty bool, commandArray []string, resConf *subsystem.ResourceConfig, imageName string) {
 	// containerInit 包含容器初始化时需要记录的一些信息
 	// todo 添加镜像 挂载 等参数
-	containerInit, parentCmd, writePipe := container.NewParentProcess(tty)
+	containerInit, parentCmd, writePipe := container.NewParentProcess(tty, imageName)
 	if parentCmd == nil {			// 如果没有创建出 进程命令
 		log.Errorf("New parent process error")
 		return
@@ -39,7 +39,7 @@ func Run(tty bool, commandArray []string, resConf *subsystem.ResourceConfig) {
 	_, err := exec.Command("grep", "cgroup2", "/proc/filesystems").CombinedOutput()
 	if err != nil {		// cgroup v1
 		// use dockergsh as cgroup name
-		cgroupManager := cgroup.NewCgroupManager("dockergsh")
+		cgroupManager := cgroup.NewCgroupManager(containerInit.IdBase)
 		//  如果以 -it 启动容器，那么退出时，直接删除 cgroup
 		if tty {
 			defer cgroupManager.DestroyV1()
@@ -54,7 +54,7 @@ func Run(tty bool, commandArray []string, resConf *subsystem.ResourceConfig) {
 		}
 	} else {		// cgroup v2
 		// use dockergsh as cgroup name
-		cgroupManager := cgroup.NewCgroupManager("dockergsh")
+		cgroupManager := cgroup.NewCgroupManager(containerInit.IdBase)
 		//  如果以 -it 启动容器，那么退出时，直接删除 cgroup
 		if tty {
 			defer cgroupManager.DestroyV2()
@@ -80,7 +80,7 @@ func Run(tty bool, commandArray []string, resConf *subsystem.ResourceConfig) {
 			log.Errorf("Wait for child err: %v", err)
 		}
 
-		// todo 停止容器
+		// todo 停止容器时，删除挂载路径
 	}
 }
 

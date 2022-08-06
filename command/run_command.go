@@ -47,18 +47,18 @@ var RunCommand = &cli.Command{
 		}
 
 		var cmdArray []string
-
 		for i := 0; i < context.NArg(); i++ {
 			cmdArray = append(cmdArray, context.Args().Get(i))
 		}
 
 
 		// docker run --it [imageName]
+		// docker run -it -m 100m busybox stress --vm-bytes 200m --vm-keep -m 1
 
 		// 获取 image name
-		//imageName := cmdArray[0]
-		//cmdArray = cmdArray[1:]
-		//fmt.Println(imageName)
+		imageName := cmdArray[0]
+		cmdArray = cmdArray[1:]
+		fmt.Println(imageName)
 
 		// -it 和 -d 不能同时使用
 		tty := context.Bool("it")
@@ -74,7 +74,7 @@ var RunCommand = &cli.Command{
 			CpuSet: context.String("cpuset"),
 		}
 
-		cmdExec.Run(tty, cmdArray, resConf)
+		cmdExec.Run(tty, cmdArray, resConf, imageName)
 
 		return nil
 	},

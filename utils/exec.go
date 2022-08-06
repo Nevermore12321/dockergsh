@@ -28,7 +28,7 @@ func NewPipe() (*os.File, *os.File, error) {
 func NewId() string {
 	letterBytes := "1234567890abcdefghigklmnopqrstuvwxyz"
 	rand.Seed(time.Now().UnixNano())
-	b := make([]byte, 32)
+	b := make([]byte, 16)
 	for i := range b {
 		b[i] = letterBytes[rand.Intn(len(letterBytes))]
 	}
@@ -40,4 +40,18 @@ func NewId() string {
  */
 func Encode(b []byte) string {
 	return base32.StdEncoding.EncodeToString(b)
+}
+
+/*
+判断文件夹是否存在
+ */
+func PathExists(path string) (bool, error) {
+	_, err := os.Stat(path)
+	if err == nil {
+		return true, nil
+	}
+	if os.IsNotExist(err) {
+		return false, nil
+	}
+	return false, err
 }

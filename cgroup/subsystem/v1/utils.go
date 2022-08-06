@@ -45,7 +45,7 @@ func GetCgroupPath(subsystem string, cgroupPath string, autoCreate bool) (string
 	// 如果目录不存在就创建
 	if err == nil || (autoCreate && os.IsNotExist(err)) {
 		if os.IsNotExist(err) {
-			if err := os.Mkdir(path.Join(cgroupRoot, cgroupPath), 0755); err != nil {
+			if err := os.Mkdir(path.Join(cgroupRoot, "dockergsh", cgroupPath), 0755); err != nil {
 				return "", fmt.Errorf("error create cgroup %v", err)
 			}
 		}

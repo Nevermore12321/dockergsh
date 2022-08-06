@@ -10,8 +10,8 @@ import (
 )
 
 var (
-	CgroupV2RootPathPrefix string = "/sys/fs/cgroup"
-	Root string
+	CgroupV2RootPathPrefix string = "/sys/fs/cgroup/dockergsh"
+	Root                   string
 )
 
 // 获取 cgroup 的绝对路径
@@ -34,8 +34,14 @@ func GetCgroupPath(cgroupPath string, autoCreate bool) (string, error) {
 	// 如果目录不存在就创建
 	if err == nil || (autoCreate && os.IsNotExist(err)) {
 		if os.IsNotExist(err) {
-			if err := os.Mkdir(path.Join(cgroupRoot, cgroupPath), 0755); err != nil {
+			if err := os.MkdirAll(path.Join(cgroupRoot, cgroupPath), 0755); err != nil {
 				return "", fmt.Errorf("error create cgroup %v", err)
+			}
+			if err := ioutil.WriteFile(
+				path.Join(cgroupRoot, "cgroup.subtree_control"),
+				[]byte("+cpu +cpuset +memory +io +pids"),
+				0644); err != nil {
+				return "", fmt.Errorf("set cgroup subtree_control fail %v", err)
 			}
 		}
 		return path.Join(cgroupRoot, cgroupPath), nil
@@ -43,7 +49,6 @@ func GetCgroupPath(cgroupPath string, autoCreate bool) (string, error) {
 		return "", fmt.Errorf("cgroup path error %v", err)
 	}
 }
-
 
 // FindCgroupMountPoint("memory"),这里返回具体某个 cgroup 挂载的根路径
 func FindCgroupMountpoint() string {
@@ -62,9 +67,8 @@ func FindCgroupMountpoint() string {
 
 	// 获取到 /user.slice/user-0.slice/session-11.scope ，将最后的 session 路径去掉
 	split_fields := strings.Split(string(text), ":")
-	pathArr := strings.Split(split_fields[len(split_fields) - 1], "/")
+	pathArr := strings.Split(split_fields[len(split_fields)-1], "/")
 	userCgroupPath := strings.Join(pathArr[0:len(pathArr)-1], "/")
 
 	return CgroupV2RootPathPrefix + userCgroupPath
 }
-

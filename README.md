@@ -114,3 +114,21 @@ pivot_root: 改变root文件系统
 ```shell
 pivot_root(new_root,put_old)
 ```
+
+#### 使用 overlay2 来构造镜像
+
+使用 overlay2 来构造镜像，过程：
+- Docker在使用镜像启动一个容器时，会新建 2 个 layer
+  - writelayer: 是容器唯一的可读写层
+  - container-initlayer : 是为容器新建的只读层，用来存储容器启动时传入的系统信息 
+- 但是并不是以writelayer和container-initlayer命名的
+- 最后把 writelayer、container-initlayer 和相关镜像的 layers 都 mount 到一个 mnt 目录下，然后把这个 mnt 目录作为容器启动的根目录。
+
+根据 overlay2 有三层架构：
+- CreateRootDir(rootURL) : 创建存放 dockergsh 层级的 根目录
+- CreateLowerLayer(imageURL, rootURL) : 创建 rootURL/lower lower layer 层级目录
+- CreateUpperLayer(rootURL) : 创建 rootURL/upper upper layer 层级目录
+- CreateWorkDir(rootURL) : 创建 rootURL/work work layer 层级目录
+- CreateMountPoint(imageURL, rootURl) : 创建 rootURL/merge merge layer 层级目录
+
+![构造镜像的文件系统层级流程](https://github.com/Nevermore12321/LeetCode/blob/blog/%E4%BA%91%E8%AE%A1%E7%AE%97/docker/%E4%BD%BF%E7%94%A8overlay%E5%88%9B%E5%BB%BA%E6%96%87%E4%BB%B6%E7%B3%BB%E7%BB%9F%E5%B1%82%E7%BA%A7%E8%BF%87%E7%A8%8B.PNG?raw=true)
