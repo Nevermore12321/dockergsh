@@ -34,6 +34,14 @@ var RunCommand = &cli.Command{
 			Name:  "cpuset",
 			Usage: "cpuset limit",
 		},
+		&cli.StringFlag{
+			Name: "v",
+			Usage: "Volume",
+		},
+		&cli.StringFlag{
+			Name: "name",
+			Usage: "container name",
+		},
 	},
 	/*
 	这里是run命令执行的真正函数。
@@ -46,6 +54,7 @@ var RunCommand = &cli.Command{
 			return fmt.Errorf("Missing container command")
 		}
 
+		// 要实行的 命令
 		var cmdArray []string
 		for i := 0; i < context.NArg(); i++ {
 			cmdArray = append(cmdArray, context.Args().Get(i))
@@ -58,11 +67,19 @@ var RunCommand = &cli.Command{
 		// 获取 image name
 		imageName := cmdArray[0]
 		cmdArray = cmdArray[1:]
-		fmt.Println(imageName)
+
+		// 获取 选项参数变量
+		// volume
+		volume := context.String("v")
+
+		// container name
+		containerName := context.String("name")
+
 
 		// -it 和 -d 不能同时使用
 		tty := context.Bool("it")
 		detach := context.Bool("d")
+
 		if tty && detach {
 			return fmt.Errorf("-it and -d paramter can not both provided")
 		}
@@ -74,7 +91,7 @@ var RunCommand = &cli.Command{
 			CpuSet: context.String("cpuset"),
 		}
 
-		cmdExec.Run(tty, cmdArray, resConf, imageName)
+		cmdExec.Run(tty, cmdArray, resConf, imageName, containerName, volume)
 
 		return nil
 	},

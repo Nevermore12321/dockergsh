@@ -12,10 +12,10 @@ import (
 	"github.com/Nevermore12321/dockergsh/container"
 )
 
-func Run(tty bool, commandArray []string, resConf *subsystem.ResourceConfig, imageName string) {
+func Run(tty bool, commandArray []string, resConf *subsystem.ResourceConfig, imageName, containerName, volume string) {
 	// containerInit 包含容器初始化时需要记录的一些信息
 	// todo 添加镜像 挂载 等参数
-	containerInit, parentCmd, writePipe := container.NewParentProcess(tty, imageName)
+	containerInit, parentCmd, writePipe := container.NewParentProcess(tty, imageName, volume)
 	if parentCmd == nil {			// 如果没有创建出 进程命令
 		log.Errorf("New parent process error")
 		return
@@ -81,6 +81,7 @@ func Run(tty bool, commandArray []string, resConf *subsystem.ResourceConfig, ima
 		}
 
 		// todo 停止容器时，删除挂载路径
+		container.DeleteWorkSpace(true, volume, containerInit.MergeUrl, containerInit.RootUrl)
 	}
 }
 

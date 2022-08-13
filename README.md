@@ -1,4 +1,7 @@
+[TOC]
+
 # 自己动手写 docker 笔记
+
 
 
 ## Run 命令
@@ -132,3 +135,9 @@ pivot_root(new_root,put_old)
 - CreateMountPoint(imageURL, rootURl) : 创建 rootURL/merge merge layer 层级目录
 
 ![构造镜像的文件系统层级流程](https://github.com/Nevermore12321/LeetCode/blob/blog/%E4%BA%91%E8%AE%A1%E7%AE%97/docker/%E4%BD%BF%E7%94%A8overlay%E5%88%9B%E5%BB%BA%E6%96%87%E4%BB%B6%E7%B3%BB%E7%BB%9F%E5%B1%82%E7%BA%A7%E8%BF%87%E7%A8%8B.PNG?raw=true)
+
+
+#### 挂载 volume
+
+挂载流程：
+![mount volume](https://github.com/Nevermore12321/LeetCode/blob/blog/%E4%BA%91%E8%AE%A1%E7%AE%97/docker/%E6%8C%82%E8%BD%BDvolume%E6%B5%81%E7%A8%8B.PNG?raw=true)

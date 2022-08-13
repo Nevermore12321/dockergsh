@@ -23,6 +23,7 @@ type ContainerInit struct {
 	Id       string
 	IdBase   string
 	ImageUrl string
+	MergeUrl string
 	RootUrl  string
 }
 
@@ -39,7 +40,7 @@ type ContainerInit struct {
 - exec.Cmd 命令结构体
 - os.File 一个写管道
 */
-func NewParentProcess(tty bool, imageName string) (*ContainerInit, *exec.Cmd, *os.File) {
+func NewParentProcess(tty bool, imageName, volume string) (*ContainerInit, *exec.Cmd, *os.File) {
 	// 初始化管道, 父进程通过管道，将子进程运行的参数传过去
 	readPipe, writerPipe, err := utils.NewPipe()
 	if err != nil {
@@ -58,7 +59,6 @@ func NewParentProcess(tty bool, imageName string) (*ContainerInit, *exec.Cmd, *o
 	// 通过 os/exec 来 fork 一个子进程并且 执行当前程序，传入 init 参数
 	// 也就是在子进程中执行 dockergsh init
 	cmd := exec.Command(initCmd, "init")
-	//cmd := exec.Command("/proc/self/exe", "init")
 
 
 	// todo 从镜像构造容器
@@ -67,15 +67,15 @@ func NewParentProcess(tty bool, imageName string) (*ContainerInit, *exec.Cmd, *o
 	// 该容器的根目录，以 id 命名
 	rootURL := DefaultFsURL + idBase
 	// 挂载时 挂载目录
-	mntURL := DefaultFsURL + idBase + "/merge"
+	mergeURL := DefaultFsURL + idBase + "/merge"
 	// 该容器的 镜像
 	imageURL := imageName + ".tar"
 
 	// 在子进程中，添加一个文件描述符. 除了 012， 那么该 readPipe 的文件描述符为 3
 	cmd.ExtraFiles = []*os.File{readPipe}
 	// 指定 命令的 工作目录
-	NewWorkSpace(imageURL, rootURL)
-	cmd.Dir = mntURL
+	NewWorkSpace(imageURL, volume, mergeURL, rootURL)
+	cmd.Dir = mergeURL
 	fmt.Println(cmd, readPipe, writerPipe)
 
 	// 设置 CLONE Flag，（Namespace）
@@ -112,28 +112,37 @@ func NewParentProcess(tty bool, imageName string) (*ContainerInit, *exec.Cmd, *o
 	}
 
 	// todo 添加 image 信息
-	return &ContainerInit{Id: id, IdBase: idBase}, cmd, writerPipe
+	return &ContainerInit{Id: id, IdBase: idBase, MergeUrl: mergeURL, RootUrl: rootURL}, cmd, writerPipe
 }
 
 // 创建一个 overlay2 的文件系统，供容器挂载
-func NewWorkSpace(imageURL, rootURL string) {
+func NewWorkSpace(imageURL, volume, mergeURL, rootURL string) {
 	// 如果 root path 不存在，就创建
-	image.CreateRootDir(rootURL)
-	image.CreateLowerLayer(imageURL, rootURL)
-	image.CreateUpperLayer(rootURL)
-	image.CreateWorkDir(rootURL)
+	_ = image.CreateRootDir(rootURL)
+	_ = image.CreateLowerLayer(imageURL, rootURL)
+	_ = image.CreateUpperLayer(rootURL)
+	_ = image.CreateWorkDir(rootURL)
 
-	image.CreateMountPoint(imageURL, rootURL) // 创建merge层
+	_ = image.CreateMountPoint(imageURL, mergeURL, rootURL) // 创建merge层
+
+	_ = CreateVolume(volume, mergeURL)	// 创建 并挂载 volume
+
 }
 
 
 // 删除 container 时，将 挂载的 可修改的 upper 、work 层删掉
 // 当容器删除或者，docker -it 的容器退出时，删除挂载目录
-func DeleteWorkSpace(umount bool, rootURL string)  {
-	// todo 删除挂载目录
+func DeleteWorkSpace(umount bool, volume, mergeURL, rootURL string)  {
+	// 这里 umount 表示是否需要 umount  merge layer
 	if umount {
-		fmt.Println("test")
+		// umount volume
+		if volume != "" {
+			_ = DeleteVolume(volume, mergeURL)
+		}
+		//  umount merge layer
+		_ = image.DeleteMountPoint(mergeURL)
 	}
-	image.DeleteWriteLayer(rootURL)
+
+	_ = image.DeleteWriteLayer(rootURL)
 }
 
