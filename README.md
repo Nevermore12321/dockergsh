@@ -139,5 +139,41 @@ pivot_root(new_root,put_old)
 
 #### 挂载 volume
 
+挂载技术就是 Linux 的**绑定挂载**(bind mount)机制它的主要作用是:
+- 允许你将一个目录或者文件而不是整个设备挂载到指定目录上。
+- 并且，这时你在该挂载点上进行的任何操作，只是发生在被挂载的目录或者文件上，而原挂载点的内容会被隐藏起来且不受影响
+
+原理：
+绑定挂载实际上是一个 inode 替换的过程。
+- 在 Linux 操作系统中，可以把 inode 理解为存放文件内容的“对象”，
+- dentry (目录项）就是访问这个inode所使用的”指针＂
+- 一个 inode 也就类似一个目录文件，它可以操作该目录下的所有文件
+
+
+示例：
+```shell
+mount --bind /home /test
+```
+
+![mount --bind挂载技术](https://github.com/Nevermore12321/LeetCode/blob/blog/%E4%BA%91%E8%AE%A1%E7%AE%97/docker/volume%E6%8C%82%E8%BD%BD%E6%8A%80%E6%9C%AFmount_bind.PNG?raw=true)
+
+
+- 会将 /home 挂载到 /test 上。
+- 这其实相当于将 /test 的 dentry 重定向到了 /home 的 inode。
+- 这样当我们修改 /test 目录时，实际上修改的是 /home 目录的 inode。
+- 因此，一旦执行 umount 命令，/test 目录原先的内容就会恢复，因为修改实际发生在 /home 目录里
+
+
 挂载流程：
 ![mount volume](https://github.com/Nevermore12321/LeetCode/blob/blog/%E4%BA%91%E8%AE%A1%E7%AE%97/docker/%E6%8C%82%E8%BD%BDvolume%E6%B5%81%E7%A8%8B.PNG?raw=true)
+
+
+#### docker -d 后台运行
+
+当前运行命令的 dockergsh 是主进程，容器是被当前 dockergsh 进程 fork 出来的子进程。子进程的结束和父进程的运行是一个异步的过程，即父进程永远不知道子进程到底什么时候结束。
+
+如果创建子进程的父进程退出，那么这个子进程就成了没人管的孩子，俗称孤儿进程。为了避免孤儿进程退出时无法释放所占用的资源而僵死， 进程号为1的进程 init 就会接受这些孤儿进程。这就是父进程退出而容器进程依然运行的原理。
+
+虽然容器刚开始是由当前运行的 dockergsh 进程创建的，但是当 dockergsh 进程退出后，容器进程就会被进程号为1的 init 进程接管，这时容器进程还是运行着的，这样就实现了 dockergsh 退出、容器不岩掉的功能。
+
+

@@ -13,4 +13,3 @@ func CommitContainer(containerName, imagesName string) {
 		log.Errorf("Tar folder %s error %v", mergeURL, err)
 	}
 }
-}

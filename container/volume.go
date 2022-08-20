@@ -67,6 +67,7 @@ func MountVolume(volumeURLs []string, mergeURL string) error  {
 	}
 
 	//  mount 挂载
+	// mount --bind linux 的挂载技术，只是一个 inode 的引用。
 	mountCmd := exec.Command("mount", "--bind", hostURL, containerVolumeURL)
 	mountCmd.Stdout = os.Stdout
 	mountCmd.Stderr = os.Stderr

@@ -19,5 +19,6 @@ var CommitCommand = cli.Command{
 		imageName := context.Args().Get(1)
 
 		cmdExec.CommitContainer(containerName, imageName)
+		return nil
 	},
 }

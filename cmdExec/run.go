@@ -76,6 +76,7 @@ func Run(tty bool, commandArray []string, resConf *subsystem.ResourceConfig, ima
 
 	// 如果是 -it 伪终端模式，那么需要监听，如果退出，需要释放容器资源
 	if tty {
+		// parent.Wait() 主要是用于父进程等待子进程结束
 		if err := parentCmd.Wait(); err != nil {
 			log.Errorf("Wait for child err: %v", err)
 		}
