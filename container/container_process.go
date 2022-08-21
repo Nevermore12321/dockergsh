@@ -13,9 +13,13 @@ import (
 
 // 全局环境变量
 var (
-	DefaultInfoLocation string = "/var/run/dockergsh/%s/"
-	DefaultFsURL string = "/var/lib/dockergsh/"
+	DefaultInfoLocation string = "/var/lib/dockergsh/%s/"
+	DefaultFsURL        string = "/var/lib/dockergsh/"
 	ContainerLogFile    string = "container.log"
+	RUNNING             string = "running"
+	STOP                string = "stopped"
+	EXIT                string = "exited"
+	ConfigName          string = "config.json"
 )
 
 // container init 进程的信息 结构体
@@ -27,6 +31,19 @@ type ContainerInit struct {
 	RootUrl  string
 }
 
+//  container 的详细信息
+type ContainerInfo struct {
+	Pid         string   `json:"pid"`          // 容器的init进程在宿主机上的 PID
+	Id          string   `json:"id"`           // 容器Id
+	Name        string   `json:"name"`         // 容器名
+	Command     string   `json:"command"`      // 容器内init运行命令
+	CreateTime  string   `json:"create_time"`  // 创建时间
+	Status      string   `json:"status"`       // 容器的状态
+	Volume      string   `json:"volume"`       // 容器的数据卷
+	PortMapping []string `json:"port_mapping"` // 端口映射
+	RootUrl     string   `json:"root_url"`     // 容器的根目录
+
+}
 
 /*
 该函数父进程，也就是当前进程执行的内容，
@@ -60,7 +77,6 @@ func NewParentProcess(tty bool, imageName, volume string) (*ContainerInit, *exec
 	// 也就是在子进程中执行 dockergsh init
 	cmd := exec.Command(initCmd, "init")
 
-
 	// todo 从镜像构造容器
 	id := utils.NewId()
 	idBase := utils.Encode([]byte(id))
@@ -82,8 +98,6 @@ func NewParentProcess(tty bool, imageName, volume string) (*ContainerInit, *exec
 	cmd.SysProcAttr = &syscall.SysProcAttr{
 		Cloneflags: syscall.CLONE_NEWUTS | syscall.CLONE_NEWPID | syscall.CLONE_NEWNS | syscall.CLONE_NEWNET | syscall.CLONE_NEWIPC,
 	}
-
-
 
 	// 构造容器的日志
 	if tty { // 如果是 -it 选项，那么需要将输入输出都重定向到 标准输入输出
@@ -112,7 +126,7 @@ func NewParentProcess(tty bool, imageName, volume string) (*ContainerInit, *exec
 	}
 
 	// todo 添加 image 信息
-	return &ContainerInit{Id: id, IdBase: idBase, MergeUrl: mergeURL, RootUrl: rootURL}, cmd, writerPipe
+	return &ContainerInit{Id: id, IdBase: idBase, MergeUrl: mergeURL, RootUrl: rootURL, ImageUrl: image.DefaultImageDir + imageName}, cmd, writerPipe
 }
 
 // 创建一个 overlay2 的文件系统，供容器挂载
@@ -125,14 +139,13 @@ func NewWorkSpace(imageURL, volume, mergeURL, rootURL string) {
 
 	_ = image.CreateMountPoint(imageURL, mergeURL, rootURL) // 创建merge层
 
-	_ = CreateVolume(volume, mergeURL)	// 创建 并挂载 volume
+	_ = CreateVolume(volume, mergeURL) // 创建 并挂载 volume
 
 }
 
-
 // 删除 container 时，将 挂载的 可修改的 upper 、work 层删掉
 // 当容器删除或者，docker -it 的容器退出时，删除挂载目录
-func DeleteWorkSpace(umount bool, volume, mergeURL, rootURL string)  {
+func DeleteWorkSpace(umount bool, volume, mergeURL, rootURL string) {
 	// 这里 umount 表示是否需要 umount  merge layer
 	if umount {
 		// umount volume
@@ -145,4 +158,3 @@ func DeleteWorkSpace(umount bool, volume, mergeURL, rootURL string)  {
 
 	_ = image.DeleteWriteLayer(rootURL)
 }
-

@@ -75,7 +75,6 @@ var RunCommand = &cli.Command{
 		// container name
 		containerName := context.String("name")
 
-
 		// -it 和 -d 不能同时使用
 		tty := context.Bool("it")
 		detach := context.Bool("d")
