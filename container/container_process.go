@@ -106,7 +106,7 @@ func NewParentProcess(tty bool, imageName, volume string) (*ContainerInit, *exec
 		cmd.Stderr = os.Stderr
 	} else { // 否则，则是 -d 模式，生成容器对应日志目录
 		// 创建日志目录，日志目录为  /var/run/dockergsh/contain_id/
-		dirURL := fmt.Sprintf(DefaultInfoLocation, id)
+		dirURL := fmt.Sprintf(DefaultInfoLocation, idBase)
 		if err := os.MkdirAll(dirURL, 0622); err != nil && os.IsExist(err) {
 			log.Errorf("NewParentProcess mkdir %s error %v", dirURL, err)
 			return nil, nil, nil

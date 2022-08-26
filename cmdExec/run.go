@@ -118,7 +118,7 @@ func sendInitCommand(comArray []string, writePipe *os.File) {
 */
 func recordContainerInfo(containerInit *container.ContainerInit, containerPid int, containerName string, commandArray []string) (string, error) {
 	//  创建时间
-	createTime := time.Now().Format("2006-01-01 13:20:10")
+	createTime := time.Now().Format("2006-01-02 15:04:05")
 	//  容器的启动命令
 	command := strings.Join(commandArray, " ")
 	log.Infof("Container command is %s:", command)
@@ -158,7 +158,8 @@ func recordContainerInfo(containerInit *container.ContainerInit, containerPid in
 	// 如果 idFlag 为 false，也就是 docker 启动时设置了容器的名称，那么就添加一个软链接 /var/lib/dockergsh/[containerName] 到 /var/lib/dockergsh/[containerID]
 	// 便于观察
 	if !idFlag {
-		linkURL := fmt.Sprintf(container.DefaultInfoLocation[:len(container.DefaultInfoLocation) - 1], containerName)
+		containersUrl := fmt.Sprintf(container.DefaultInfoLocation, "containers/%s/")
+		linkURL := fmt.Sprintf(containersUrl[:len(container.DefaultInfoLocation) - 1], containerName)
 		if err := os.Symlink(configFileURL, linkURL); err != nil {
 			log.Errorf("Soft link error %s error %v", configFileURL, err)
 			return "", err

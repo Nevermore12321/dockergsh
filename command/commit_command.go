@@ -6,7 +6,7 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-var CommitCommand = cli.Command{
+var CommitCommand = &cli.Command{
 	Name: "commit",
 	Usage: "commit a container into images",
 	Action: func(context *cli.Context) error {

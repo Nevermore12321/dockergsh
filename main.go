@@ -23,6 +23,8 @@ func main() {
 	app.Commands = []*cli.Command{
 		cmd.InitCommand,
 		cmd.RunCommand,
+		cmd.CommitCommand,
+		cmd.ListCommand,
 	}
 
 	// 命令运行前的初始化 logrus 的日志配置
@@ -36,6 +38,4 @@ func main() {
 	if err := app.Run(os.Args); err != nil {
 		log.Fatal(err)
 	}
-
-
 }
