@@ -25,7 +25,7 @@ func ListContainers() {
 
 	// 遍历每一个容器
 	for _, file := range files {
-		if file.Name() == "network" || file.Name() == "images" || file.Name() == "containers" {
+		if file.Name() == "network" || file.Name() == "images" || file.Name() == "containers" || file.Name() == "named_containers" {
 			continue
 		}
 

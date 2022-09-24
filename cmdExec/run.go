@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/Nevermore12321/dockergsh/cgroup"
 	"github.com/Nevermore12321/dockergsh/cgroup/subsystem"
+	"github.com/Nevermore12321/dockergsh/utils"
 	log "github.com/sirupsen/logrus"
 	"os"
 	"os/exec"
@@ -131,13 +132,13 @@ func recordContainerInfo(containerInit *container.ContainerInit, containerPid in
 
 	// 初始化 ConntainerInfo 实例
 	containerInfo := &container.ContainerInfo{
-		Name: containerName,
-		Pid: strconv.Itoa(containerPid),
-		Id: containerInit.Id,
-		Command: command,
+		Name:       containerName,
+		Pid:        strconv.Itoa(containerPid),
+		Id:         containerInit.Id,
+		Command:    command,
 		CreateTime: createTime,
-		Status: container.RUNNING,
-		RootUrl: containerInit.RootUrl,
+		Status:     container.RUNNING,
+		RootUrl:    containerInit.RootUrl,
 	}
 
 	// 将 ContainerInfo 结构体实例 转成 json 字符串
@@ -155,11 +156,20 @@ func recordContainerInfo(containerInit *container.ContainerInit, containerPid in
 		return "", err
 	}
 
-	// 如果 idFlag 为 false，也就是 docker 启动时设置了容器的名称，那么就添加一个软链接 /var/lib/dockergsh/[containerName] 到 /var/lib/dockergsh/[containerID]
+	// 如果 idFlag 为 false，也就是 docker 启动时设置了容器的名称，那么就添加一个软链接 /var/lib/dockergsh/named_containers/[containerName] 到 /var/lib/dockergsh/[containerID]
 	// 便于观察
 	if !idFlag {
-		containersUrl := fmt.Sprintf(container.DefaultInfoLocation, "containers/%s/")
-		linkURL := fmt.Sprintf(containersUrl[:len(container.DefaultInfoLocation) - 1], containerName)
+		containersUrl := fmt.Sprintf(container.DefaultInfoLocation, "named_containers")
+		if exist, err := utils.PathExists(containersUrl); err != nil {
+			log.Errorf("Soft link floder %s create err: %v", containersUrl, err)
+			return "", err
+		} else if !exist {
+			if err := os.MkdirAll(containersUrl, 0777); err != nil {
+				log.Errorf("Create Soft Link Foldeer Failed:  %s . %v", containersUrl, err)
+				return "", err
+			}
+		}
+		linkURL := containersUrl + containerName
 		if err := os.Symlink(configFileURL, linkURL); err != nil {
 			log.Errorf("Soft link error %s error %v", configFileURL, err)
 			return "", err
@@ -184,7 +194,6 @@ func recordContainerInfo(containerInit *container.ContainerInit, containerPid in
 	return containerName, nil
 }
 
-
 /*
 删除容器的信息
 */
@@ -197,7 +206,7 @@ func deleteContainerInfo(containerId, containerName string) {
 	}
 
 	// 删除 软链接
-	linkUrl := fmt.Sprintf(container.DefaultInfoLocation[:len(container.DefaultInfoLocation)-1], containerName)
+	linkUrl := fmt.Sprintf(container.DefaultInfoLocation[:len(container.DefaultInfoLocation)], "named_containers/" + containerName)
 	if err := os.RemoveAll(linkUrl); err != nil {
 		log.Errorf("Remove dir %s error %v", linkUrl, err)
 	}
