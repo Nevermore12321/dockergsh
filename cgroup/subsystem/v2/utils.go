@@ -3,6 +3,7 @@ package v2
 import (
 	"fmt"
 	log "github.com/sirupsen/logrus"
+	"io"
 	"io/ioutil"
 	"os"
 	"path"
@@ -60,7 +61,7 @@ func FindCgroupMountpoint() string {
 
 	defer file.Close()
 
-	text, err := ioutil.ReadAll(file)
+	text, err := io.ReadAll(file)
 	if err != nil {
 		return ""
 	}

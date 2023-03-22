@@ -82,7 +82,7 @@ int execve(const char *filename, char *const argv[], char *const envp［］）
 
 对于 cgroup v2 版本：
 1. 查看 当前进程的 cgroup 信息，在目录 `/proc/self/cgroup`
-  - 可以看到，关在的目录就在 /user.slice/user-0.slice/session-9.scope
+  - 可以看到，关键的目录就在 /user.slice/user-0.slice/session-9.scope
   - 再加上前缀 /sys/fs/cgroup/user.slice/user-0.slice/session-9.scope
 ```shell
 root@ubuntu:~# cat /proc/self/cgroup
@@ -175,5 +175,21 @@ mount --bind /home /test
 如果创建子进程的父进程退出，那么这个子进程就成了没人管的孩子，俗称孤儿进程。为了避免孤儿进程退出时无法释放所占用的资源而僵死， 进程号为1的进程 init 就会接受这些孤儿进程。这就是父进程退出而容器进程依然运行的原理。
 
 虽然容器刚开始是由当前运行的 dockergsh 进程创建的，但是当 dockergsh 进程退出后，容器进程就会被进程号为1的 init 进程接管，这时容器进程还是运行着的，这样就实现了 dockergsh 退出、容器不岩掉的功能。
+
+
+## PS 命令
+
+docker run 命令已经将容器启动和执行的记录到 rootfs/[container_id]/container/config.json 中
+
+docker ps 只要遍历 rootfs下的所有 container_id 目录，获取 /container/config.json 容器信息即可
+
+
+
+
+## LOG 命令
+
+在 docker run 命令中，子进程的输出/错误已经重定向到了 rootfs/[container_id]/container.log 中
+
+docker logs 只需要 tail 这个 container.log 文件即可
 
 

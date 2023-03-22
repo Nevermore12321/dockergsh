@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/Nevermore12321/dockergsh/container"
 	log "github.com/sirupsen/logrus"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"text/tabwriter"
@@ -14,8 +13,8 @@ import (
 func ListContainers() {
 	// /var/lib/dockergsh/
 	rootURL := fmt.Sprintf(container.DefaultInfoLocation, "")
-	rootURL = rootURL[:len(rootURL) - 1]
-	files, err := ioutil.ReadDir(rootURL)
+	rootURL = rootURL[:len(rootURL)-1]
+	files, err := os.ReadDir(rootURL)
 	if err != nil {
 		log.Errorf("Read dir %s error %v", rootURL, err)
 	}
@@ -31,7 +30,7 @@ func ListContainers() {
 
 		configURL := filepath.Join(rootURL, file.Name(), "container", container.ConfigName)
 		// 读取配置文件 config.json
-		info, err := getContainerInfo(configURL)
+		info, err := GetContainerInfo(configURL)
 		if err != nil {
 			if err != os.ErrInvalid {
 				log.Errorf("Get container info error %v", err)
@@ -65,11 +64,10 @@ func ListContainers() {
 	}
 }
 
-
 /*
 读取对应 container 的配置文件 config.json ，并且解析为 ContainerInfo 结构体返回
- */
-func getContainerInfo(configURL string) (*container.ContainerInfo, error) {
+*/
+func GetContainerInfo(configURL string) (*container.ContainerInfo, error) {
 	// 读取配置文件
 	content, err := os.ReadFile(configURL)
 	if err != nil {

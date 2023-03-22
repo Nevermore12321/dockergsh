@@ -27,8 +27,8 @@ func Run(tty bool, commandArray []string, resConf *subsystem.ResourceConfig, ima
 	/*
 		这里的 Start 方法是真正开始前面创建好的command的调用:
 		1. 首先会 clone 出来一个 namespace 隔离的进程
-		2. 然后在子进程中，调用／proc/self/exe，也就是调用自己，发送 init 参数，调用我们写的 init 方法，去初始化容器的一些资源
-		3. 注意，子进程执行 ／proc/self/exe ，也就是说要让子进程成为 container 中的 init 程序，需要注意 init 程序不能退出
+		2. 然后在子进程中，调用 /proc/self/exe，也就是调用自己，发送 init 参数，调用我们写的 init 方法，去初始化容器的一些资源
+		3. 注意，子进程执行 /proc/self/exe ，也就是说要让子进程成为 container 中的 init 程序，需要注意 init 程序不能退出
 	*/
 	if err := parentCmd.Start(); err != nil {
 		log.Errorf("new parent process error: %v", err)
@@ -159,7 +159,7 @@ func recordContainerInfo(containerInit *container.ContainerInit, containerPid in
 	// 如果 idFlag 为 false，也就是 docker 启动时设置了容器的名称，那么就添加一个软链接 /var/lib/dockergsh/named_containers/[containerName] 到 /var/lib/dockergsh/[containerID]
 	// 便于观察
 	if !idFlag {
-		containersUrl := fmt.Sprintf(container.DefaultInfoLocation, "named_containers")
+		containersUrl := fmt.Sprintf(container.DefaultInfoLocation, container.NamedContainersDir)
 		if exist, err := utils.PathExists(containersUrl); err != nil {
 			log.Errorf("Soft link floder %s create err: %v", containersUrl, err)
 			return "", err
@@ -206,7 +206,7 @@ func deleteContainerInfo(containerId, containerName string) {
 	}
 
 	// 删除 软链接
-	linkUrl := fmt.Sprintf(container.DefaultInfoLocation[:len(container.DefaultInfoLocation)], "named_containers/" + containerName)
+	linkUrl := fmt.Sprintf(container.DefaultInfoLocation[:len(container.DefaultInfoLocation)], "named_containers/"+containerName)
 	if err := os.RemoveAll(linkUrl); err != nil {
 		log.Errorf("Remove dir %s error %v", linkUrl, err)
 	}

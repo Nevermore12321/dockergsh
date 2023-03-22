@@ -14,8 +14,8 @@ var RunCommand = &cli.Command{
 	Usage: `Create a container with namespace and cgroup limit
 			mydocker run -it [command]`,
 	Flags: []cli.Flag{
-		&cli.BoolFlag{							// docker run -it 命令
-			Name: "it",
+		&cli.BoolFlag{ // docker run -it 命令
+			Name:  "it",
 			Usage: "enable tty",
 		},
 		&cli.BoolFlag{
@@ -35,31 +35,30 @@ var RunCommand = &cli.Command{
 			Usage: "cpuset limit",
 		},
 		&cli.StringFlag{
-			Name: "v",
+			Name:  "v",
 			Usage: "Volume",
 		},
 		&cli.StringFlag{
-			Name: "name",
+			Name:  "name",
 			Usage: "container name",
 		},
 	},
 	/*
-	这里是run命令执行的真正函数。
-	1.判断参数是否包含 command
-	2.获取用户指定的 command
-	3.调用 Runfunction 去准备启动容器
+		这里是run命令执行的真正函数。
+		1.判断参数是否包含 command
+		2.获取用户指定的 command
+		3.调用 Runfunction 去准备启动容器
 	*/
 	Action: func(context *cli.Context) error {
 		if context.NArg() < 1 {
 			return fmt.Errorf("Missing container command")
 		}
 
-		// 要实行的 命令
+		// 要执行的 命令
 		var cmdArray []string
 		for i := 0; i < context.NArg(); i++ {
 			cmdArray = append(cmdArray, context.Args().Get(i))
 		}
-
 
 		// docker run --it [imageName]
 		// docker run -it -m 100m busybox stress --vm-bytes 200m --vm-keep -m 1
@@ -86,14 +85,12 @@ var RunCommand = &cli.Command{
 		// cgroup 资源配置
 		resConf := &subsystem.ResourceConfig{
 			MemoryLimit: context.String("m"),
-			CpuShare: context.String("cpu"),
-			CpuSet: context.String("cpuset"),
+			CpuShare:    context.String("cpu"),
+			CpuSet:      context.String("cpuset"),
 		}
 
 		cmdExec.Run(tty, cmdArray, resConf, imageName, containerName, volume)
 
 		return nil
 	},
-
 }
-

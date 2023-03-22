@@ -2,7 +2,7 @@ package container
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -41,6 +41,8 @@ func RunContainerInitProcess() error {
 	log.Infof("Find path %s", cmdPath)
 
 	// 使用 syscall.Exec 执行命令, 执行 docker run 最后跟的命令
+	// 最终运行用户进程的地方
+	// 这里最终运行的是通过 管道进来的 docker run 的用户命令而不是 init
 	if err = syscall.Exec(cmdPath, cmdArray[0:], os.Environ()); err != nil {
 		log.Infof("cmdPath: %v", cmdPath)
 		log.Errorf(err.Error())
@@ -63,7 +65,7 @@ func readUserCommand() []string {
 	// 打开 管道
 	pipe := os.NewFile(uintptr(3), "pipe")
 	// 从管道中读取 命令选项
-	msg, err := ioutil.ReadAll(pipe)
+	msg, err := io.ReadAll(pipe)
 	if err != nil {
 		log.Errorf("Init read pipe error %v", err)
 		return nil
@@ -73,7 +75,8 @@ func readUserCommand() []string {
 	return strings.Split(msgStr, " ")
 }
 
-/**
+/*
+*
 Init 挂载点
 */
 func setUpMount() {
@@ -98,18 +101,19 @@ func setUpMount() {
 	// 这里的 MountFlag 的意思如下:
 	// 1. MS_NOEXEC - 在本文件系统中不允许运行其他程序。
 	// 2. MS_NOSUID - 在本系统中运行程序的时候，不允许 set-user-ID 或 set-group-ID
-	// 3. MS_NODEV - 这个参数是自从 Linux2.4 以来，所有 mount 的系统都会默认设定的参数。本函数最后的s y s c a l l . E x e c，是最为重要的一句黑魔法，正是这个系统调用实现了完成
+	// 3. MS_NODEV - 这个参数是自从 Linux2.4 以来，所有 mount 的系统都会默认设定的参数。
 	defaultMountFlags := syscall.MS_NOEXEC | syscall.MS_NODEV | syscall.MS_NOSUID
 	syscall.Mount("proc", "/proc", "proc", uintptr(defaultMountFlags), "")
 	syscall.Mount("tmpfs", "/dev", "tmpfs", syscall.MS_NOSUID|syscall.MS_STRICTATIME, "mode=755")
 
 }
 
-/**
+/*
+*
 为了使当前root的老 root 和新 root 不在同一个文件系统下，我们把root重新mount了一次
 bind mount是把相同的内容换了一个挂载点的挂载方法
 如果不做这一步，就会让其他root没有了 proc 文件系统
-- 通过 pivot_root 将 root 的文件系统一道 put_old
+- 通过 pivot_root 将 root 的文件系统移动到 put_old
 - umount root
 - mount new_root
 - mount old root

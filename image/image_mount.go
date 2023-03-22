@@ -9,7 +9,7 @@ import (
 )
 
 var (
-	DefaultImageDir = "/var/lib/dockergsh/images/"
+	DefaultImageDir        = "/var/lib/dockergsh/images/"
 	DefaultImageLowerLayer = "/var/lib/dockergsh/images/busybox/"
 )
 
@@ -31,7 +31,7 @@ func CreateRootDir(rootURL string) error {
 
 /*
 创建 image 层 ，也就是不可修改层
-也就是 pull 下来的镜像，保存的位置，就是 imageURL
+就是 pull 下来的镜像，保存的位置，就是 imageURL
 将 tar 格式的镜像解压 ，其实就是镜像层的，不可修改层 layer
 */
 func CreateLowerLayer(imageURL, rootURL string) error {
@@ -69,7 +69,7 @@ func CreateLowerLayer(imageURL, rootURL string) error {
 /*
 创建 镜像层 lower 之上的 upper 层，作为读写层
 其实就是 Container 层，在启动一个容器的时候会在最后的image层的上一层自动创建，所有对容器数据的更改都会发生在这一层
- */
+*/
 func CreateUpperLayer(rootURL string) error {
 	upperLayerURL := rootURL + "/upper"
 	exists, err := utils.PathExists(upperLayerURL)
@@ -89,7 +89,7 @@ func CreateUpperLayer(rootURL string) error {
 
 /*
 创建 work 文件夹作为最终的挂载点
- */
+*/
 func CreateWorkDir(rootURL string) error {
 	workLayerURL := rootURL + "/work"
 	exists, err := utils.PathExists(workLayerURL)
@@ -111,7 +111,7 @@ func CreateWorkDir(rootURL string) error {
 创建 merge layer
 lower、upper、worker 三种目录合并出来的目录，merged 目录里面本身并没有任何实体文件
 这里的目录，其实就是最终容器的工作目录
- */
+*/
 func CreateMountPoint(imageURL, mergeURL, rootURL string) error {
 	mergeLayerURL := mergeURL
 	exists, err := utils.PathExists(mergeLayerURL)
@@ -153,7 +153,7 @@ func CreateMountPoint(imageURL, mergeURL, rootURL string) error {
 
 /*
 删除读写层，也就是 container 的根目录
- */
+*/
 func DeleteWriteLayer(rootURL string) error {
 	if err := os.RemoveAll(rootURL); err != nil {
 		log.Errorf("Remove WriteLayer dir %s error %v", rootURL, err)
@@ -164,7 +164,7 @@ func DeleteWriteLayer(rootURL string) error {
 
 /*
 解除挂载 merge layer
- */
+*/
 func DeleteMountPoint(mergeURL string) error {
 	umountCmd := exec.Command("umount", mergeURL)
 	umountCmd.Stderr = os.Stderr

@@ -1,7 +1,8 @@
 package utils
 
 import (
-	"encoding/base32"
+	"crypto/sha256"
+	"encoding/hex"
 	"math/rand"
 	"os"
 	"time"
@@ -37,14 +38,16 @@ func NewId() string {
 
 /*
 将 id 进行 base32 编码
- */
-func Encode(b []byte) string {
-	return base32.StdEncoding.EncodeToString(b)
+*/
+func EncodeSha256(b []byte) string {
+	bytes := sha256.Sum256(b)
+	hashCode := hex.EncodeToString(bytes[:])
+	return hashCode
 }
 
 /*
 判断文件夹是否存在
- */
+*/
 func PathExists(path string) (bool, error) {
 	_, err := os.Stat(path)
 	if err == nil {
