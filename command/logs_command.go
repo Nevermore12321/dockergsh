@@ -2,7 +2,7 @@ package command
 
 import (
 	"fmt"
-	"github.com/Nevermore12321/dockergsh/logs"
+	"github.com/Nevermore12321/dockergsh/cmdExec"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
@@ -15,7 +15,7 @@ var LogsCommand = &cli.Command{
 			return fmt.Errorf("Please input your container name")
 		}
 		containerName := context.Args().Get(0)
-		err := logs.LogContainer(containerName)
+		err := cmdExec.LogContainer(containerName)
 		if err != nil {
 			logrus.Errorf("Log container error %v", err)
 			return err

@@ -193,3 +193,18 @@ docker ps 只要遍历 rootfs下的所有 container_id 目录，获取 /containe
 docker logs 只需要 tail 这个 container.log 文件即可
 
 
+## EXEC 命令
+
+利用 setns 系统调用将当前进程的 pid 写入到对应的 namespace 中，就可以实现。
+
+步骤：
+1. 需要先打开 /proc/[pid]/ns/ 目录文件下，对应 Namespace 的文件
+2. 调用 setns 系统调用将当前进程加入到对应进程的namespace中
+
+注意：对于 Mount Namespace 一个具有多线程的进程是无法使用 setns 调用进入到对应命名空间的。
+但是对于 Go 来说，Go 每启动一个程序就会进入 多线程，因此无法直接在 go 程序中调用 setns 系统调用。需要借助 cgo 实现。
+
+
+cgo 其实不是一个真正的包，而只是go创建的一个特殊命名空间，用来与 C 的命名空间交互。
+
+![docker run 的实现](https://github.com/Nevermore12321/LeetCode/blob/blog/%E4%BA%91%E8%AE%A1%E7%AE%97/docker/%E8%87%AA%E5%B7%B1%E5%8A%A8%E6%89%8B%E5%86%99docker-run%E5%91%BD%E4%BB%A4%E6%B5%81%E7%A8%8B.PNG?raw=true)
