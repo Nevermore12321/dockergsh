@@ -21,7 +21,7 @@ var ExecCommand = &cli.Command{
 			return nil
 		}
 		if context.NArg() < 2 {
-			return fmt.Errorf("Missing container name or command")
+			return fmt.Errorf("missing container name or command")
 		}
 		containerArg := context.Args().Get(0)
 		var commandArr []string

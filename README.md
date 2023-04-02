@@ -207,4 +207,17 @@ docker logs 只需要 tail 这个 container.log 文件即可
 
 cgo 其实不是一个真正的包，而只是go创建的一个特殊命名空间，用来与 C 的命名空间交互。
 
-![docker run 的实现](https://github.com/Nevermore12321/LeetCode/blob/blog/%E4%BA%91%E8%AE%A1%E7%AE%97/docker/%E8%87%AA%E5%B7%B1%E5%8A%A8%E6%89%8B%E5%86%99docker-run%E5%91%BD%E4%BB%A4%E6%B5%81%E7%A8%8B.PNG?raw=true)
+![docker exec 的实现](https://github.com/Nevermore12321/LeetCode/blob/blog/%E4%BA%91%E8%AE%A1%E7%AE%97/docker/%E8%87%AA%E5%B7%B1%E5%8A%A8%E6%89%8B%E5%86%99docker-exec%E5%91%BD%E4%BB%A4%E6%B5%81%E7%A8%8B.PNG?raw=true)
+
+
+## STOP 命令
+
+stop 命令很简单，主要是查找到主进程 pid，然后发送 SIGTERM 信号，等待进程结束即可。
+
+stopContainer 的主要步骤：
+1. 获取容器Pid
+2. 对对应的 pid 发送 SIGTERM 信号
+3. 修改容器信息（状态）
+4. 将修改后的信息写入容器信息文件
+
+![docker stop 的实现](https://github.com/Nevermore12321/LeetCode/blob/blog/%E4%BA%91%E8%AE%A1%E7%AE%97/docker/%E8%87%AA%E5%B7%B1%E5%8A%A8%E6%89%8B%E5%86%99docker-stop%E5%91%BD%E4%BB%A4%E6%B5%81%E7%A8%8B.PNG?raw=true)

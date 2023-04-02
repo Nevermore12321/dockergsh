@@ -42,7 +42,7 @@ func LogContainer(containerArg string) error {
 	return nil
 }
 
-// 用户在使用时，可以传入容器名称，也可以传入容器的id
+// GetContainerInfoByArg 用户在使用时，可以传入容器名称，也可以传入容器的id
 // GetContainerInfoByArg 通过判断是容器名还是 容器id，返回查到的 容器信息  ContainerInfo
 func GetContainerInfoByArg(containerArg string) (*container.ContainerInfo, error) {
 	var containerInfo *container.ContainerInfo
@@ -74,7 +74,7 @@ func GetContainerInfoByArg(containerArg string) (*container.ContainerInfo, error
 	if containerInfo == nil {
 		hashId := utils.EncodeSha256([]byte(containerArg))
 		containerURL := fmt.Sprintf(container.DefaultInfoLocation, hashId)
-		configURL := filepath.Join(containerURL, container.ConfigName)
+		configURL := filepath.Join(containerURL, container.ContainerConfigPath, container.ConfigName)
 		containerInfo, err = GetContainerInfo(configURL)
 		if err != nil {
 			if err != os.ErrInvalid {

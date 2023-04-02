@@ -15,6 +15,7 @@ import (
 var (
 	DefaultInfoLocation string = "/var/lib/dockergsh/%s/"
 	DefaultFsURL        string = "/var/lib/dockergsh/"
+	ContainerConfigPath string = "container"
 	ContainerLogFile    string = "container.log"
 	NamedContainersDir  string = "named_containers"
 	RUNNING             string = "running"
@@ -23,7 +24,7 @@ var (
 	ConfigName          string = "config.json"
 )
 
-// container init 进程的信息 结构体
+// ContainerInit container init 进程的信息 结构体
 type ContainerInit struct {
 	Id       string
 	IdBase   string
@@ -32,7 +33,7 @@ type ContainerInit struct {
 	RootUrl  string
 }
 
-// container 的详细信息
+// ContainerInfo container 的详细信息
 type ContainerInfo struct {
 	Pid         string   `json:"pid"`          // 容器的init进程在宿主机上的 PID
 	Id          string   `json:"id"`           // 容器Id

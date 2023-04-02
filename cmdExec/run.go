@@ -150,7 +150,7 @@ func recordContainerInfo(containerInit *container.ContainerInit, containerPid in
 	jsonStr := string(jsonBytes)
 
 	//  如果 目录没有创建，则创建
-	configFileURL := containerInfo.RootUrl + "/container/"
+	configFileURL := containerInfo.RootUrl + "/" + container.ContainerConfigPath + "/"
 	if err := os.MkdirAll(configFileURL, 0622); err != nil {
 		log.Errorf("Mkdir error %s error %v", configFileURL, err)
 		return "", err
