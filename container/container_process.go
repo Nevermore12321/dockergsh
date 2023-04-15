@@ -59,7 +59,7 @@ type ContainerInfo struct {
 - exec.Cmd 命令结构体
 - os.File 一个写管道
 */
-func NewParentProcess(tty bool, imageName, volume string) (*ContainerInit, *exec.Cmd, *os.File) {
+func NewParentProcess(tty bool, imageName, volume string, envSlice []string) (*ContainerInit, *exec.Cmd, *os.File) {
 	// 初始化管道, 父进程通过管道，将子进程运行的参数传过去
 	readPipe, writerPipe, err := utils.NewPipe()
 	if err != nil {
@@ -91,6 +91,14 @@ func NewParentProcess(tty bool, imageName, volume string) (*ContainerInit, *exec
 
 	// 在子进程中，添加一个文件描述符. 除了 012， 那么该 readPipe 的文件描述符为 3
 	cmd.ExtraFiles = []*os.File{readPipe}
+
+	// 添加环境变量
+	// 这里设置环境变量，只针对 docker run -it -e xxx=xxx xxximage sh 有效
+	// docker exec 进入后无效，因为 exec 命令其实是发起的另一个进程，这个进程是宿主机的进程，并不是容器内的。
+	// exec 实现使用了 cgo，并且调用了 setns 系统调用，才使得宿主机的进程进入到容器内进程的命名空间，但这里宿主机进程是继承自宿主机的，根容器进程无关
+	// 因此 exec 命令无法看到容器内部的环境变量，
+	cmd.Env = append(os.Environ(), envSlice...)
+
 	// 指定 命令的 工作目录
 	NewWorkSpace(imageURL, volume, mergeURL, rootURL)
 	cmd.Dir = mergeURL
@@ -127,7 +135,6 @@ func NewParentProcess(tty bool, imageName, volume string) (*ContainerInit, *exec
 		cmd.Stderr = stdLogFile
 	}
 
-	// todo 添加 image 信息
 	return &ContainerInit{Id: id, IdBase: idBase, MergeUrl: mergeURL, RootUrl: rootURL, ImageUrl: image.DefaultImageDir + imageName}, cmd, writerPipe
 }
 

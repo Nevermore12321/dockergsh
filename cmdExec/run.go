@@ -16,10 +16,10 @@ import (
 	"github.com/Nevermore12321/dockergsh/container"
 )
 
-func Run(tty bool, commandArray []string, resConf *subsystem.ResourceConfig, imageName, containerName, volume string) {
+func Run(tty bool, commandArray []string, resConf *subsystem.ResourceConfig, imageName, containerName, volume string, envSlice []string) {
 	// containerInit 包含容器初始化时需要记录的一些信息
 	// todo 添加镜像 挂载 等参数
-	containerInit, parentCmd, writePipe := container.NewParentProcess(tty, imageName, volume)
+	containerInit, parentCmd, writePipe := container.NewParentProcess(tty, imageName, volume, envSlice)
 	if parentCmd == nil { // 如果没有创建出 进程命令
 		log.Errorf("New parent process error")
 		return
@@ -36,7 +36,7 @@ func Run(tty bool, commandArray []string, resConf *subsystem.ResourceConfig, ima
 
 	// record container info
 	// 将 Container 详情写入到 文件 config.json 中
-	containerName, err := recordContainerInfo(containerInit, parentCmd.Process.Pid, containerName, commandArray)
+	containerName, err := recordContainerInfo(containerInit, parentCmd.Process.Pid, containerName, commandArray, volume)
 	if err != nil {
 		log.Errorf("Record container info error %v", err)
 		return
@@ -117,7 +117,7 @@ func sendInitCommand(comArray []string, writePipe *os.File) {
 记录容器的信息
 将 container 的详细信息写入到 /var/lib/dockergsh/[containerID]/container/config.json
 */
-func recordContainerInfo(containerInit *container.ContainerInit, containerPid int, containerName string, commandArray []string) (string, error) {
+func recordContainerInfo(containerInit *container.ContainerInit, containerPid int, containerName string, commandArray []string, volume string) (string, error) {
 	//  创建时间
 	createTime := time.Now().Format("2006-01-02 15:04:05")
 	//  容器的启动命令
@@ -139,6 +139,7 @@ func recordContainerInfo(containerInit *container.ContainerInit, containerPid in
 		CreateTime: createTime,
 		Status:     container.RUNNING,
 		RootUrl:    containerInit.RootUrl,
+		Volume:     volume,
 	}
 
 	// 将 ContainerInfo 结构体实例 转成 json 字符串

@@ -42,6 +42,10 @@ var RunCommand = &cli.Command{
 			Name:  "name",
 			Usage: "container name",
 		},
+		&cli.StringSliceFlag{
+			Name:  "e",
+			Usage: "set environments",
+		},
 	},
 	/*
 		这里是run命令执行的真正函数。
@@ -74,6 +78,9 @@ var RunCommand = &cli.Command{
 		// container name
 		containerName := context.String("name")
 
+		// 环境变量
+		envSlice := context.StringSlice("e")
+
 		// -it 和 -d 不能同时使用
 		tty := context.Bool("it")
 		detach := context.Bool("d")
@@ -89,7 +96,7 @@ var RunCommand = &cli.Command{
 			CpuSet:      context.String("cpuset"),
 		}
 
-		cmdExec.Run(tty, cmdArray, resConf, imageName, containerName, volume)
+		cmdExec.Run(tty, cmdArray, resConf, imageName, containerName, volume, envSlice)
 
 		return nil
 	},

@@ -221,3 +221,13 @@ stopContainer 的主要步骤：
 4. 将修改后的信息写入容器信息文件
 
 ![docker stop 的实现](https://github.com/Nevermore12321/LeetCode/blob/blog/%E4%BA%91%E8%AE%A1%E7%AE%97/docker/%E8%87%AA%E5%B7%B1%E5%8A%A8%E6%89%8B%E5%86%99docker-stop%E5%91%BD%E4%BB%A4%E6%B5%81%E7%A8%8B.PNG?raw=true)
+
+
+## RM 命令
+
+rm 删除命令很简单，主要分四个步骤：
+1. 根据容器名或者 id 获取容器信息
+2. 判断容器是否处于停止状态
+3. 查找容器存储信息的地址
+4. 移除记录容器信息的文件
+

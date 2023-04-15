@@ -42,7 +42,12 @@ func ExecInContainer(containerArg string, commandArr []string) error {
 	_ = os.Setenv(ENV_EXEC_PID, pid)
 
 	// 关键点，每次在 exec 到容器中时，要和容器启动时的环境变量一致
-	containerEnvs := GetEnvsByPid(pid)
+	// 这里调用了 cgo 方法，直接调用linux setns 系统调用，因此继承的是宿主机的环境变量，这一步就是将容器内进程的环境变量加入到 cgo 进程中
+	containerEnvs, err := GetEnvsByPid(pid)
+	if err != nil {
+		logrus.Errorf("Get Envs error %v", err)
+		return err
+	}
 	cmd.Env = append(os.Environ(), containerEnvs...)
 
 	if err := cmd.Run(); err != nil {
@@ -64,16 +69,20 @@ func GetContainerPidByArg(containerArg string) (string, error) {
 }
 
 // 根据指定的 pid 获取进程的 所有环境变量
-func GetEnvsByPid(pid string) []string {
-	// 进程环境变量存放的文件为 /proc/[pid]/environ
-	envPath := fmt.Sprintf("/proc/%s/environ", pid)
-	contentBytes, err := os.ReadFile(envPath)
+// 根据指定的 pid 获取对应进程的环境变量
+func GetEnvsByPid(pid string) ([]string, error) {
+	// 进程的环境变量信息存放在 /proc/[PID]/environ 文件中
+	// 获取对应 pid 的环境变量文件路径
+	path := fmt.Sprintf("/proc/%s/environ", pid)
+
+	// 读取环境变量文件内容
+	contentBytes, err := os.ReadFile(path)
 	if err != nil {
-		logrus.Errorf("Read environ file %s error %v", envPath, err)
-		return nil
+		logrus.Errorf("Read file %s error %v", path, err)
+		return nil, err
 	}
 
-	// environ 文件中的环境变量是以 \u0000 字符（不同于""）分割的
+	// 多个环境变量之间的分隔符是 \u0000
 	envs := strings.Split(string(contentBytes), "\u0000")
-	return envs
+	return envs, nil
 }
