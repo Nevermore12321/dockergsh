@@ -29,6 +29,7 @@ func main() {
 		cmd.ExecCommand,
 		cmd.StopCommand,
 		cmd.RemoveCommand,
+		cmd.NetworkCommand,
 	}
 
 	// 命令运行前的初始化 logrus 的日志配置

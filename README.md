@@ -231,3 +231,46 @@ rm 删除命令很简单，主要分四个步骤：
 3. 查找容器存储信息的地址
 4. 移除记录容器信息的文件
 
+
+## NETWORK 命令
+
+### create  
+例如：
+```shell
+docker network create --subnet 192.168.0.0/24 --driver bridge testbridge
+```
+上面的命令通过 docker network 创建一个容器网络。创建的流程如下：
+![docker_network 实现](https://github.com/Nevermore12321/LeetCode/blob/blog/%E4%BA%91%E8%AE%A1%E7%AE%97/docker/%E8%87%AA%E5%B7%B1%E5%8A%A8%E6%89%8B%E5%86%99docker_network%E5%91%BD%E4%BB%A4%E5%AE%9E%E7%8E%B0%E6%B5%81%E7%A8%8B.PNG?raw=true)
+
+上图中的 IPAM 和 Network Driver 是两个组件:
+- IPAM 负责通过传入的 IP 网段去分配一个可用的 IP 地址给容器和网络的网关，比如网络的网段是192.168.0.0116，那么通过 IPAM 获取这个网段的容器地址就是在这个网段中的一个IP地址，然后用于分配给容器的连接端点，保证网络中的容器IP不会冲突。
+- Network Driver是用于网络的管理的，例如在创建网络时完成网络初始化动作及在容器启动时完成网络端点配置，像 Bridge 的驱动对应的动作就是创建 Linux Bridge 和挂载 Veth 设备
+
+
+创建网络主要分为几步：
+1. 根据创建的网段信息，申请一个网关 IP
+2. 通过 network driver 创建网络
+3. 记录网络信息
+
+
+#### IP 地址分配管理
+
+分配 Ip 时，要保证在该网段中是唯一的。
+
+保证唯一，可以使用 bitmap 算法，例如一个网段，有 255 个ip，每一个 ip 对应一个 bit，已分配置 1，未分配置 0
+
+
+#### 相关概念
+**网络**：网络是容器的集合，在这个网络上的容器可以通过这个网络互相通信，就像挂载到同一个 Linux Bridge 设备上的网络一样。
+**网络端点（ednpoint）**：endpoint 用来连接容器与网络，保证容器内部与网络通信。例如 veth 设备，一端挂载到容器内部，一端挂载到 Bridge 上。网络端点的信息传输需要靠两个组件完成，分别是网络驱动和 IPAM
+- 网络驱动：Network Driver，不同的网络驱动对网络的创建、连接、销毁等的策略不同，
+- IPAM：用于网络 IP 地址的分配和释放，包括容器的 IP 地址和网络相关的 IP 地址，
+
+
+#### 创建网络并连接网络
+通过创建网络时，指定 --net 参数，指定容器启动时连接的网络：
+```shell
+dockergsh run -it -p 80:80 --net testBridgeNet xxx 
+```
+整个流程为：
+![创建网络并连接网络流程]
