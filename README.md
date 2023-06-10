@@ -274,3 +274,9 @@ dockergsh run -it -p 80:80 --net testBridgeNet xxx
 ```
 整个流程为：
 ![创建网络并连接网络流程]
+
+**linux-bridge 创建网络流程**
+最终创建网络是通过 Network driver 来实现的。这里我们通过 linux bridge 来实现
+
+![linux-bridge创建网络流程](https://github.com/Nevermore12321/LeetCode/blob/blog/%E4%BA%91%E8%AE%A1%E7%AE%97/docker/%E8%87%AA%E5%B7%B1%E5%8A%A8%E6%89%8B%E5%86%99docker-linux-bridge%E5%88%9B%E5%BB%BA%E7%BD%91%E7%BB%9C%E6%B5%81%E7%A8%8B.PNG?raw=true)
+
