@@ -2,6 +2,7 @@ package network
 
 import (
 	"encoding/json"
+	"fmt"
 	log "github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink"
 	"io/fs"
@@ -9,6 +10,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"text/tabwriter"
 )
 
 var (
@@ -202,4 +204,29 @@ func CreateNetwork(driver, subnet, name string) error {
 	// 保存网络信息，将网络信息保存在网络的配置文件中，以便查询和在网络上连接网络端点。
 	return network.dump(networkDefaultPath)
 
+}
+
+// 展示所有的网络
+func ListNetwork() error {
+	// 通过 tabwrite 格式化输出
+	w := tabwriter.NewWriter(os.Stdout, 12, 1, 3, ' ', 0)
+	_, err := fmt.Fprintf(w, "Name\tIpRange\tDriver\n")
+	if err != nil {
+		return err
+	}
+
+	// 遍历 init 中读取到的所有网络的全局变量，显示
+	for _, nw := range networks {
+		_, err := fmt.Fprintf(w, "%s\t%s\t%s\n", nw.Name, nw.IpRange.String(), nw.Driver)
+		if err != nil {
+			return err
+		}
+	}
+
+	// 刷新
+	if err := w.Flush(); err != nil {
+		log.Errorf("Flush error %v", err)
+		return err
+	}
+	return nil
 }

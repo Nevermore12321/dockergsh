@@ -38,5 +38,18 @@ var NetworkCommand = &cli.Command{
 			}
 			return nil
 		},
-	}},
+	},
+		{
+			Name:  "list",
+			Usage: "List networks",
+			Action: func(context *cli.Context) error {
+				if err := network.Init(); err != nil {
+					return err
+				}
+				if err := network.ListNetwork(); err != nil {
+					return err
+				}
+				return nil
+			},
+		}},
 }

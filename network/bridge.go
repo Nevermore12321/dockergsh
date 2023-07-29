@@ -35,6 +35,7 @@ func (bd *BridgeNetworkDriver) Create(subnet string, name string) (*Network, err
 	network := &Network{
 		Name:    name,
 		IpRange: ipRange,
+		Driver:  bd.Name(),
 	}
 
 	// 配置 Linux-Bridge
