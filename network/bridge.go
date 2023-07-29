@@ -78,12 +78,27 @@ func (bd *BridgeNetworkDriver) initBridge(network *Network) error {
 
 }
 
+// Linux-bridge 删除网络
+func (bd *BridgeNetworkDriver) Delete(network *Network) error {
+	return nil
+}
+
+// Linux-bridge 连接网络端点到新建的网络
+func (bd *BridgeNetworkDriver) Connect(network *Network, endpoint *Endpoint) error {
+	return nil
+}
+
+// Linux-bridge 将新建的网络端点删除，断开连接
+func (bd *BridgeNetworkDriver) Disconnect(network *Network, endpoint *Endpoint) error {
+	return nil
+}
+
 // 创建 linux-bridge 设备
 func createBridgeInterface(bridgeName string) error {
 	// 先检查是否已经存在了同名的 bridge 设备
 	_, err := net.InterfaceByName(bridgeName)
 	// 如果存在, 直接返回 nil, 如果报错不存在，返回错误
-	if err == nil || !strings.Contains(err.Error(), "no such network device") {
+	if err == nil || !strings.Contains(err.Error(), "no such network interface") {
 		return err
 	}
 

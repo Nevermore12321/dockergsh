@@ -276,7 +276,24 @@ dockergsh run -it -p 80:80 --net testBridgeNet xxx
 ![创建网络并连接网络流程]
 
 **linux-bridge 创建网络流程**
+```shell
+dockergsh network create --subnet 10.20.80.0/24 --driver bridge testgsh
+```
+创建网络的步骤：
+![创建网络步骤](https://github.com/Nevermore12321/LeetCode/blob/blog/%E4%BA%91%E8%AE%A1%E7%AE%97/docker/%E8%87%AA%E5%B7%B1%E5%8A%A8%E6%89%8B%E5%86%99docker-%E5%88%9B%E5%BB%BA%E7%BD%91%E7%BB%9C%E6%AD%A5%E9%AA%A4.PNG?raw=true)
+
+
+
+
 最终创建网络是通过 Network driver 来实现的。这里我们通过 linux bridge 来实现
 
 ![linux-bridge创建网络流程](https://github.com/Nevermore12321/LeetCode/blob/blog/%E4%BA%91%E8%AE%A1%E7%AE%97/docker/%E8%87%AA%E5%B7%B1%E5%8A%A8%E6%89%8B%E5%86%99docker-linux-bridge%E5%88%9B%E5%BB%BA%E7%BD%91%E7%BB%9C%E6%B5%81%E7%A8%8B.PNG?raw=true)
 
+
+**linux-bridge 创建容器并且将容器网络连接到新建的网络上**
+```shell
+dockergsh run -it -p 80:80 --net testgsh xxx
+```
+
+创建容器，并将容器网络连接到新网络上步骤如下：
+![创建容器并连接网络步骤](https://github.com/Nevermore12321/LeetCode/blob/blog/%E4%BA%91%E8%AE%A1%E7%AE%97/docker/%E8%87%AA%E5%B7%B1%E5%8A%A8%E6%89%8B%E5%86%99docker-%E5%88%9B%E5%BB%BA%E5%AE%B9%E5%99%A8%E5%B9%B6%E8%BF%9E%E6%8E%A5%E7%BD%91%E7%BB%9C%E6%AD%A5%E9%AA%A4.PNG?raw=true)

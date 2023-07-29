@@ -151,14 +151,14 @@ func Init() error {
 	// 判断网络配置文件的目录是否存在，不存在则创建
 	if _, err := os.Stat(networkDefaultPath); err != nil {
 		if os.IsNotExist(err) {
-			os.MkdirAll(networkDefaultPath, 0644)
+			return os.MkdirAll(networkDefaultPath, 0644)
 		} else {
 			return err
 		}
 	}
 
 	// 检查网络配置目录下的所有网络配置文件，
-	filepath.Walk(networkDefaultPath, func(nwPath string, info fs.FileInfo, err error) error {
+	return filepath.Walk(networkDefaultPath, func(nwPath string, info fs.FileInfo, err error) error {
 		// 如果是目录，直接跳过
 		if info.IsDir() {
 			return nil
