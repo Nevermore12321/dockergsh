@@ -3,6 +3,7 @@ package network
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/Nevermore12321/dockergsh/container"
 	log "github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink"
 	"io/fs"
@@ -228,5 +229,9 @@ func ListNetwork() error {
 		log.Errorf("Flush error %v", err)
 		return err
 	}
+	return nil
+}
+
+func ConnectNetwork(networkName string, containerInfo *container.ContainerInfo) error {
 	return nil
 }

@@ -86,6 +86,7 @@ func (bd *BridgeNetworkDriver) Delete(network *Network) error {
 
 // Linux-bridge 连接网络端点到新建的网络
 func (bd *BridgeNetworkDriver) Connect(network *Network, endpoint *Endpoint) error {
+	bridgeName := network.Name
 	return nil
 }
 

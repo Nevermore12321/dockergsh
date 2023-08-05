@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/Nevermore12321/dockergsh/cgroup"
 	"github.com/Nevermore12321/dockergsh/cgroup/subsystem"
+	"github.com/Nevermore12321/dockergsh/network"
 	"github.com/Nevermore12321/dockergsh/utils"
 	log "github.com/sirupsen/logrus"
 	"os"
@@ -16,9 +17,9 @@ import (
 	"github.com/Nevermore12321/dockergsh/container"
 )
 
-func Run(tty bool, commandArray []string, resConf *subsystem.ResourceConfig, imageName, containerName, volume string, envSlice []string) {
+func Run(tty bool, commandArray []string, resConf *subsystem.ResourceConfig, imageName, containerName, volume string, envSlice []string, networkName string) {
 	// containerInit 包含容器初始化时需要记录的一些信息
-	// todo 添加镜像 挂载 等参数
+	// 添加镜像 挂载 等参数
 	containerInit, parentCmd, writePipe := container.NewParentProcess(tty, imageName, volume, envSlice)
 	if parentCmd == nil { // 如果没有创建出 进程命令
 		log.Errorf("New parent process error")
@@ -76,6 +77,26 @@ func Run(tty bool, commandArray []string, resConf *subsystem.ResourceConfig, ima
 		// 将容器进程 pid 加入到 cgroup 中
 		if err = cgroupManager.ApplyV2(parentCmd.Process.Pid); err != nil {
 			log.Errorf("add process to cgroup failed: %v", err)
+		}
+	}
+
+	// 配置容器网络
+	if networkName != "" {
+		err := network.Init()
+		if err != nil {
+			log.Errorf("network init failed: %v", err)
+		}
+		// todo 端口映射
+		containerInfo := container.ContainerInfo{
+			Id:   containerInit.Id,
+			Pid:  strconv.Itoa(parentCmd.Process.Pid),
+			Name: containerName,
+			//PortMapping: portmapping,
+		}
+
+		if err = network.ConnectNetwork(networkName, &containerInfo); err != nil {
+			log.Errorf("Error Connect Network %v", err)
+			return
 		}
 	}
 

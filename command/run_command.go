@@ -46,6 +46,10 @@ var RunCommand = &cli.Command{
 			Name:  "e",
 			Usage: "set environments",
 		},
+		&cli.StringFlag{
+			Name:  "net",
+			Usage: "container network",
+		},
 	},
 	/*
 		这里是run命令执行的真正函数。
@@ -75,6 +79,9 @@ var RunCommand = &cli.Command{
 		// volume
 		volume := context.String("v")
 
+		// 获取 container network 参数变量
+		network := context.String("net")
+
 		// container name
 		containerName := context.String("name")
 
@@ -96,7 +103,7 @@ var RunCommand = &cli.Command{
 			CpuSet:      context.String("cpuset"),
 		}
 
-		cmdExec.Run(tty, cmdArray, resConf, imageName, containerName, volume, envSlice)
+		cmdExec.Run(tty, cmdArray, resConf, imageName, containerName, volume, envSlice, network)
 
 		return nil
 	},
