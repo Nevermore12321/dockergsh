@@ -86,7 +86,40 @@ func (bd *BridgeNetworkDriver) Delete(network *Network) error {
 
 // Linux-bridge 连接网络端点到新建的网络
 func (bd *BridgeNetworkDriver) Connect(network *Network, endpoint *Endpoint) error {
+	// 获取网络名，也就是 linux-bridge 的名称
 	bridgeName := network.Name
+	// 通过 bridage 名称，获取 bridge 网络的设备信息
+	br, err := netlink.LinkByName(bridgeName)
+	if err != nil {
+		log.Debugf("Can not find bridge %s", bridgeName)
+		return err
+	}
+
+	// 创建 veth 接口配置，该 veth 设备， 一端最终插在 bridge 网桥上
+	linkAttrs := netlink.NewLinkAttrs()
+	// 网络名字有长度限制，因此取 endpoint-id 的前5位
+	linkAttrs.Name = endpoint.Id[:5]
+	// 设置 veth 的 master 属性，意思就是将该 veth的一端挂载到 linux-bridge 上
+	linkAttrs.MasterIndex = br.Attrs().Index
+
+	// 创建 veth 设备，通过配置 peerName 来设置 veth 连接的另一端的接口名，类似一根网线的两头
+	// 创建的 veth 设备放在 endpint 中的 device 属性
+	// Veth 设备的另一端名字格式位 cif-[endppint_id前5位]
+	endpoint.Device = netlink.Veth{
+		LinkAttrs: linkAttrs,
+		PeerName:  "cif-" + endpoint.Id[:5],
+	}
+
+	// 通过 netlink 创建出这个 veth 设备
+	// 因为上面制定了 MasterIndex 位 bridge，因此 Veth 的一端已经挂载到了对应的 网桥上
+	if err = netlink.LinkAdd(&endpoint.Device); err != nil {
+		return fmt.Errorf("error add Endpoint Device: %v", err)
+	}
+
+	// 通过 netlink.LinkSetup 将 veth 设备启动
+	if err = netlink.LinkSetUp(&endpoint.Device); err != nil {
+		return fmt.Errorf("error set up Endpoint Device: %v", err)
+	}
 	return nil
 }
 
@@ -113,7 +146,7 @@ func createBridgeInterface(bridgeName string) error {
 	bridgeDevice := &netlink.Bridge{LinkAttrs: linkAttrs}
 
 	// 调用 netlink 的 LinkAdd 方法，创建 Bridge 虚拟网络
-	// LinkAdd 方法就是用创建虚拟设备，其实就是调用 ip link add xxx
+	// LinkAdd 方法就是用创建虚拟设备，其实就是调用 ip link add xxx type bridge
 	if err := netlink.LinkAdd(bridgeDevice); err != nil {
 		return fmt.Errorf("bridge creation failed for bridge %s: %v", bridgeName, err)
 	}
