@@ -52,5 +52,26 @@ var NetworkCommand = &cli.Command{
 				}
 				return nil
 			},
-		}},
+		},
+		{
+			Name:  "remove",
+			Usage: "Remove one or more networks",
+			Action: func(context *cli.Context) error {
+				if context.NArg() < 1 {
+					return fmt.Errorf("Missing image name")
+				}
+				// 加载 network
+				err := network.Init()
+				if err != nil {
+					return err
+				}
+
+				if err = network.DeleteNetwork(context.Args().Get(0)); err != nil {
+					return fmt.Errorf("remove network error: %+v", err)
+				}
+
+				return nil
+			},
+		},
+	},
 }

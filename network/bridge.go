@@ -81,7 +81,17 @@ func (bd *BridgeNetworkDriver) initBridge(network *Network) error {
 
 // Linux-bridge 删除网络
 func (bd *BridgeNetworkDriver) Delete(network *Network) error {
-	return nil
+	// 网络名就是 linux-bridge 的设备名
+	bridgeName := network.Name
+
+	// 通过 netlink 找到 linux-bridge 设备
+	br, err := netlink.LinkByName(bridgeName)
+	if err != nil {
+		return err
+	}
+
+	// 删除对应的 网桥
+	return netlink.LinkDel(br)
 }
 
 // Linux-bridge 连接网络端点到新建的网络

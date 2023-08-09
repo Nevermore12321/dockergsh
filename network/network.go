@@ -372,3 +372,24 @@ func enterContainerNetns(enLink *netlink.Link, containerInfo *container.Containe
 
 	}
 }
+
+// 删除网络
+func DeleteNetwork(networkName string) error {
+	// 查看网络是否存在
+	nw, ok := networks[networkName]
+	if !ok {
+		return fmt.Errorf("no Such Network: %s", networkName)
+	}
+
+	// 释放网络 网关 ip
+	if err := IpAllocator.Release(nw.IpRange, &nw.IpRange.IP); err != nil {
+		return fmt.Errorf("error Remove Network Gateway Ip: %s", err)
+	}
+
+	// 调用 network driver 删除网络，这里以 linux-bridge 为例
+	if err := drivers[nw.Driver].Delete(nw); err != nil {
+		return fmt.Errorf("error Remove Network DriverError: %s", err)
+	}
+
+	return nw.remove(networkDefaultPath)
+}
