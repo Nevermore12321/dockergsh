@@ -1,6 +1,9 @@
 package client
 
-import "fmt"
+import (
+	"fmt"
+	"github.com/Nevermore12321/dockergsh/pkg/parse"
+)
 
 func GetHelpUsage(method string) string {
 	var usages = map[string]string{
@@ -46,10 +49,14 @@ func GetHelpUsage(method string) string {
 			return cmdHelp
 		}
 	}
-	help := fmt.Sprintf("docker [OPTIONS] COMMAND [arg...]\n -H=[unix://%s]: tcp://host:port to bind/connect to or unix://path/to/socket to use\n\nA self-sufficient runtime for linux containers.\n\nCommands:\n", DEFAULTUNIXSOCKET)
+	help := fmt.Sprintf("dockergsh [OPTIONS] COMMAND [arg...]\n -H=[unix://%s]: tcp://host:port to bind/connect to or unix://path/to/socket to use\n\nA self-sufficient runtime for linux containers.\n\nCommands:\n", DEFAULTUNIXSOCKET)
 	return help
 }
 
 func ValidateHost(host string) (string, error) {
-
+	parsedHost, err := parse.ParseHost(host, DEFAULTHTTPHOST, DEFAULTUNIXSOCKET)
+	if err != nil {
+		return host, err
+	}
+	return parsedHost, nil
 }

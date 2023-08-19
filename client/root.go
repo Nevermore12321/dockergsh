@@ -2,11 +2,13 @@ package client
 
 import (
 	"crypto/tls"
+	"crypto/x509"
 	"errors"
 	"fmt"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 	"io"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -99,10 +101,11 @@ func rootAction(context *cli.Context) error {
 	hosts := context.StringSlice("hosts")
 	if len(hosts) == 0 { // 如果没有传入 hosts 地址
 		// 首先获取 DOCKERGSH_HOST 环境变量的值
-		defaultHost := os.Getenv(DOCKERGSH_HOST)
+		defaultHost := os.Getenv(DOCKERGSH_CONFIG_HOST)
 		if defaultHost == "" {
 			defaultHost = fmt.Sprintf("unix://%s", DEFAULTUNIXSOCKET)
 		}
+
 		hosts = append(hosts, defaultHost)
 	}
 
@@ -112,11 +115,12 @@ func rootAction(context *cli.Context) error {
 
 	// 验证该 hosts 的合法性
 	host, err := ValidateHost(hosts[0])
+
 	if err != nil {
 		return err
 	}
 
-	if err = context.Set("dockergsh_host", host); err != nil {
+	if err := os.Setenv(DOCKERGSH_SERVER_HOST, host); err != nil {
 		return err
 	}
 
@@ -124,7 +128,36 @@ func rootAction(context *cli.Context) error {
 
 	var tlsConfig tls.Config
 	tlsConfig.InsecureSkipVerify = true
-	// todo tls config
+	// tlsConfig 对象需要加载一个受信的 ca 文件
+	// 如果flTlsVerify为true，Docker Client连接Docker Server需要验证安全性
+	if context.Bool("tls-verify") {
+		// 读取 ca 证书
+		filePath := context.String("tls-cacert")
+		file, err := os.ReadFile(filePath)
+		if err != nil {
+			log.Fatalf("Couldn't read ca cert %s: %s", filePath, err)
+		}
+
+		// 证书池是用于存储根证书和中间证书的集合，用于在验证证书链时提供验证所需的信任锚点。
+		certPool := x509.NewCertPool()
+
+		// 向证书池添加根证书
+		certPool.AppendCertsFromPEM(file)
+
+		tlsConfig.RootCAs = certPool
+		tlsConfig.InsecureSkipVerify = false
+
+		// 如果flTlsVerify有一个为真，那么需要加载证书发送给客户端。
+		_, errCert := os.Stat(context.String("tls-cert"))
+		_, errKey := os.Stat(context.String("tls-key"))
+		if errCert == nil && errKey == nil {
+			cert, err := tls.LoadX509KeyPair(context.String("tls-cert"), context.String("tls-key"))
+			if err != nil {
+				log.Fatalf("Couldn't load X509 key pair: %s. Key encrypted?", err)
+			}
+			tlsConfig.Certificates = []tls.Certificate{cert}
+		}
+	}
 
 	// 初始化 dockergshclient
 	// 创建Docker Client实例。
@@ -152,4 +185,5 @@ func rootAfter(context *cli.Context) error {
 	//		os.Exit(sterr.StatusCode)
 	//	}
 	//}
+	return nil
 }
