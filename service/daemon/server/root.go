@@ -1,8 +1,8 @@
 package server
 
 import (
-	"github.com/Nevermore12321/dockergsh/api"
-	"github.com/Nevermore12321/dockergsh/api/client"
+	"github.com/Nevermore12321/dockergsh/service"
+	"github.com/Nevermore12321/dockergsh/service/client"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 	"io"
@@ -31,24 +31,24 @@ func RootCmdInitial(name string, in io.Reader, out, err io.Writer) {
 	RootCmd.Version = client.VERSION
 
 	// 初始化 RootCmd 的 flags
-	RootCmd.Flags = api.CmdFlags()
+	RootCmd.Flags = service.CmdFlags()
 
 	RootCmd.Action = rootAction
-	RootCmd.Before = api.RootBefore
+	RootCmd.Before = service.RootBefore
 	RootCmd.After = rootAfter
 }
 
 func rootAction(context *cli.Context) error {
-	if err := api.PreCheckConfDebug(context); err != nil {
+	if err := service.PreCheckConfDebug(context); err != nil {
 		return err
 	}
 
-	protohost, err := api.PreCheckConfHost(context)
+	protohost, err := service.PreCheckConfHost(context)
 	if err != nil {
 		return err
 	}
 
-	tlsConfig, err := api.PreCheckConfTLS(context)
+	tlsConfig, err := service.PreCheckConfTLS(context)
 	if err != nil {
 		return err
 	}

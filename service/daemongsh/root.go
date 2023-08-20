@@ -1,8 +1,8 @@
-package server
+package daemongsh
 
 import (
-	"github.com/Nevermore12321/dockergsh/api"
-	"github.com/Nevermore12321/dockergsh/api/client"
+	"github.com/Nevermore12321/dockergsh/service"
+	"github.com/Nevermore12321/dockergsh/service/client"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 	"io"
@@ -31,24 +31,25 @@ func RootCmdInitial(name string, in io.Reader, out, err io.Writer) {
 	RootCmd.Version = client.VERSION
 
 	// 初始化 RootCmd 的 flags
-	RootCmd.Flags = api.CmdFlags()
+	// 添加 daemongsh 的 flags
+	RootCmd.Flags = append(service.CmdFlags(), daemongshFlags()...)
 
 	RootCmd.Action = rootAction
-	RootCmd.Before = api.RootBefore
+	RootCmd.Before = service.RootBefore
 	RootCmd.After = rootAfter
 }
 
 func rootAction(context *cli.Context) error {
-	if err := api.PreCheckConfDebug(context); err != nil {
+	if err := service.PreCheckConfDebug(context); err != nil {
 		return err
 	}
 
-	protohost, err := api.PreCheckConfHost(context)
+	protohost, err := service.PreCheckConfHost(context)
 	if err != nil {
 		return err
 	}
 
-	tlsConfig, err := api.PreCheckConfTLS(context)
+	tlsConfig, err := service.PreCheckConfTLS(context)
 	if err != nil {
 		return err
 	}
@@ -75,7 +76,18 @@ func rootAfter(context *cli.Context) error {
 	return nil
 }
 
-// daemon 的启动流程
+func daemongshFlags() []cli.Flag {
+	return []cli.Flag{
+		&cli.StringFlag{
+			Name:    "pidfile",
+			Aliases: []string{"p"},
+			Value:   "/var/run/docker.pid",
+			Usage:   "Path to use for daemon PID file",
+		},
+	}
+}
+
+// daemongsh 的启动流程
 func mainDaemon(context *cli.Context) {
 	//1）daemon的配置初始化。这部分在init（）函数中实现，即在mainDaemon（）运行前就执行，但由于这部分内容和mainDaemon（）的运行息息相关，可以认为是mainDaemon（）运行的先决条件。
 	//2）命令行flag参数检查。
