@@ -1,25 +1,33 @@
-package client
+package api
 
 import (
 	"crypto/tls"
 	"crypto/x509"
 	"errors"
 	"fmt"
+	"github.com/Nevermore12321/dockergsh/api/client"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
-	"io"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
 )
 
-var (
-	RootCmd        = cli.NewApp()
-	dockerCertPath = os.Getenv("DOCKERGSH_CERT_PATH")
+// dockergsh client 相关默认值
+const (
+	DEFAULTHTTPHOST   = "127.0.0.1"
+	DEFAULTUNIXSOCKET = "/var/run/docker.sock"
 )
 
+// dockergsh client 相关的环境变量名称
 const (
+	DOCKERGSH_DEBUG       = "DOCKERGSH_DEBUG"
+	DOCKERGSH_CONFIG_HOST = "DOCKERGSH_CONFIG_HOST"
+	DOCKERGSH_SERVER_HOST = "DOCKERGSH_SERVER_HOST"
+)
+
+var (
+	dockerCertPath  = os.Getenv("DOCKERGSH_CERT_PATH")
 	defaultCaFile   = "ca.pem"
 	defaultKeyFile  = "key.pem"
 	defaultCertFile = "cert.pem"
@@ -29,29 +37,8 @@ var (
 	ErrMultiHosts = errors.New("Please specify only one -H")
 )
 
-func RootCmdInitial(name string, in io.Reader, out, err io.Writer) {
-	RootCmd.Name = name
-	if in != nil {
-		RootCmd.Reader = in
-	}
-	if out != nil {
-		RootCmd.Writer = out
-	}
-	if err != nil {
-		RootCmd.ErrWriter = err
-	}
-
-	// help 信息
-	RootCmd.Usage = GetHelpUsage("")
-
-	// 初始化子命令
-	RootCmd.Commands = []*cli.Command{}
-
-	// 初始化版本
-	RootCmd.Version = VERSION
-
-	// 初始化 RootCmd 的 flags
-	RootCmd.Flags = []cli.Flag{
+func CmdFlags() []cli.Flag {
+	return []cli.Flag{
 		&cli.BoolFlag{
 			Name:    "debug",
 			Aliases: []string{"D"},
@@ -83,23 +70,19 @@ func RootCmdInitial(name string, in io.Reader, out, err io.Writer) {
 			Usage: "The socket(s) to bind to in daemon mode\nspecified using one or more tcp://host:port, unix:///path/to/socket, fd://* or fd://socketfd.",
 		},
 	}
-
-	RootCmd.Action = rootAction
-	RootCmd.Before = rootBefore
-	RootCmd.After = rootAfter
-
-	// 初始化子命令行
-	InitSubCmd(RootCmd)
 }
 
-func rootAction(context *cli.Context) error {
+func PreCheckConfDebug(context *cli.Context) error {
 	// debug为真，设置 DOCKERGSH_DEBUG 环境变量为 1
 	if context.Bool("debug") {
 		if err := os.Setenv(DOCKERGSH_DEBUG, "1"); err != nil {
 			return err
 		}
 	}
+	return nil
+}
 
+func PreCheckConfHost(context *cli.Context) ([]string, error) {
 	// hosts的作用 client 要连接的目的地址，也就是 dockergsh daemon 的地址
 	hosts := context.StringSlice("hosts")
 	if len(hosts) == 0 { // 如果没有传入 hosts 地址
@@ -113,22 +96,25 @@ func rootAction(context *cli.Context) error {
 	}
 
 	if len(hosts) > 1 {
-		return ErrMultiHosts
+		return nil, ErrMultiHosts
 	}
 
 	// 验证该 hosts 的合法性
-	host, err := ValidateHost(hosts[0])
+	host, err := client.ValidateHost(hosts[0])
 
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	if err := os.Setenv(DOCKERGSH_SERVER_HOST, host); err != nil {
-		return err
+		return nil, err
 	}
 
 	protohost := strings.SplitN(host, "://", 2)
+	return protohost, nil
+}
 
+func PreCheckConfTLS(context *cli.Context) (*tls.Config, error) {
 	var tlsConfig tls.Config
 	tlsConfig.InsecureSkipVerify = true
 	// tlsConfig 对象需要加载一个受信的 ca 文件
@@ -138,7 +124,7 @@ func rootAction(context *cli.Context) error {
 		filePath := context.String("tls-cacert")
 		file, err := os.ReadFile(filePath)
 		if err != nil {
-			log.Fatalf("Couldn't read ca cert %s: %s", filePath, err)
+			return nil, fmt.Errorf("Couldn't read ca cert %s: %s", filePath, err)
 		}
 
 		// 证书池是用于存储根证书和中间证书的集合，用于在验证证书链时提供验证所需的信任锚点。
@@ -156,37 +142,17 @@ func rootAction(context *cli.Context) error {
 		if errCert == nil && errKey == nil {
 			cert, err := tls.LoadX509KeyPair(context.String("tls-cert"), context.String("tls-key"))
 			if err != nil {
-				log.Fatalf("Couldn't load X509 key pair: %s. Key encrypted?", err)
+				return nil, fmt.Errorf("Couldn't load X509 key pair: %s. Key encrypted?", err)
 			}
 			tlsConfig.Certificates = []tls.Certificate{cert}
 		}
 	}
-
-	// 初始化 dockergshclient
-	// 创建Docker Client实例。
-	DockerGshCliInitial(context.App.Reader, context.App.Writer, context.App.ErrWriter, protohost[0], protohost[1], &tlsConfig)
-
-	return nil
+	return &tlsConfig, nil
 }
 
-func rootBefore(context *cli.Context) error {
+func RootBefore(context *cli.Context) error {
 	// 命令运行前的初始化 logrus 的日志配置
 	logrus.SetFormatter(&logrus.JSONFormatter{})
 	logrus.SetOutput(context.App.Writer)
-	return nil
-}
-
-func rootAfter(context *cli.Context) error {
-	err := context.Err()
-	logrus.Info(err)
-	// todo http status error
-	//if err != nil {
-	//	if sterr, ok := err.(*StatusError); ok {
-	//		if sterr.Status != "" {
-	//			log.Println(sterr.Status)
-	//		}
-	//		os.Exit(sterr.StatusCode)
-	//	}
-	//}
 	return nil
 }
