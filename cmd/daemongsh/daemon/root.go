@@ -1,9 +1,9 @@
 package daemon
 
 import (
+	"github.com/Nevermore12321/dockergsh/client"
+	service "github.com/Nevermore12321/dockergsh/cmd"
 	"github.com/Nevermore12321/dockergsh/daemongsh/daemon"
-	"github.com/Nevermore12321/dockergsh/service"
-	"github.com/Nevermore12321/dockergsh/service/client"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 	"io"

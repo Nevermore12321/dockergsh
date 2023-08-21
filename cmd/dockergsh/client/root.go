@@ -65,7 +65,9 @@ func rootAction(context *cli.Context) error {
 
 func rootAfter(context *cli.Context) error {
 	err := context.Err()
-	logrus.Info(err)
+	if err != nil {
+		logrus.Info(err)
+	}
 	// todo http status error
 	//if err != nil {
 	//	if sterr, ok := err.(*StatusError); ok {

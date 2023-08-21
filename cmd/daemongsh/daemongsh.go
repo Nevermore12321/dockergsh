@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/Nevermore12321/dockergsh/service/daemongsh"
+	"github.com/Nevermore12321/dockergsh/cmd/daemongsh/daemon"
 	"log"
 	"os"
 	"path/filepath"
@@ -17,10 +17,10 @@ func main() {
 	// 使用文件路径获取文件名
 	cmdName := filepath.Base(exePath)
 	// 配置命令行 app
-	daemongsh.RootCmdInitial(cmdName, os.Stdin, os.Stdout, os.Stderr)
+	daemon.RootCmdInitial(cmdName, os.Stdin, os.Stdout, os.Stderr)
 
 	// 执行命令行 app
-	if err := daemongsh.RootCmd.Run(os.Args); err != nil {
+	if err := daemon.RootCmd.Run(os.Args); err != nil {
 		log.Fatal(err)
 	}
 }
