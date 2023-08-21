@@ -15,7 +15,7 @@ type DockerGshClient struct {
 	err       io.Writer   // error interface
 }
 
-var DockerGshCli *DockerGshClient
+var DockerGshCli *DockerGshClient = new(DockerGshClient)
 
 func DockerGshCliInitial(in io.Reader, out, err io.Writer, proto, addr string, tlsConf *tls.Config) {
 	// 默认值

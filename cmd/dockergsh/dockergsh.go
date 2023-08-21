@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/Nevermore12321/dockergsh/service/client"
+	"github.com/Nevermore12321/dockergsh/cmd/dockergsh/client"
 	"log"
 	"os"
 	"path/filepath"
