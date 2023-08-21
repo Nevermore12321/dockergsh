@@ -32,13 +32,13 @@ type Config struct {
 
 func (config *Config) InitialFlags(context *cli.Context) {
 	config.PidFile = context.String("pidfile")
-	config.Root = context.String("pidfile")
+	config.Root = context.String("graph")
 	config.AutoRestart = context.Bool("pidfile")
 	config.Dns = context.StringSlice("pidfile")
 	config.DnsSearch = context.StringSlice("pidfile")
 	config.EnableIptables = context.Bool("pidfile")
 	config.EnableIpForward = context.Bool("pidfile")
-	config.DefaultIp = context.StringSlice("pidfile")
+	//config.DefaultIp = context.StringSlice("pidfile")
 	config.PidFile = context.String("pidfile")
 	config.PidFile = context.String("pidfile")
 	config.PidFile = context.String("pidfile")

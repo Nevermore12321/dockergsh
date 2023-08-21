@@ -5,7 +5,7 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
-	"github.com/Nevermore12321/dockergsh/service/client"
+	"github.com/Nevermore12321/dockergsh/pkg/parse"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 	"os"
@@ -100,7 +100,7 @@ func PreCheckConfHost(context *cli.Context) ([]string, error) {
 	}
 
 	// 验证该 hosts 的合法性
-	host, err := client.ValidateHost(hosts[0])
+	host, err := ValidateHost(hosts[0])
 
 	if err != nil {
 		return nil, err
@@ -155,4 +155,12 @@ func RootBefore(context *cli.Context) error {
 	logrus.SetFormatter(&logrus.JSONFormatter{})
 	logrus.SetOutput(context.App.Writer)
 	return nil
+}
+
+func ValidateHost(host string) (string, error) {
+	parsedHost, err := parse.ParseHost(host, DEFAULTHTTPHOST, DEFAULTUNIXSOCKET)
+	if err != nil {
+		return host, err
+	}
+	return parsedHost, nil
 }
