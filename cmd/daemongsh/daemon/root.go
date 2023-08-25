@@ -56,6 +56,7 @@ func rootAction(context *cli.Context) error {
 		return err
 	}
 
+	// todo delete docker client, add maindaemongsh
 	// 初始化 dockergshclient
 	// 创建Docker Client实例。
 	client.DockerGshCliInitial(context.App.Reader, context.App.Writer, context.App.ErrWriter, protohost[0], protohost[1], tlsConfig)
@@ -173,11 +174,12 @@ func mainDaemon(context *cli.Context) {
 	// 1.daemon的配置初始化
 	daemonCfg.InitialFlags(context)
 
-	//2）命令行flag参数个数检查。
+	//2. 命令行flag参数个数检查。
 	if context.NArg() != 0 {
 		return
 	}
-	//3）创建engine对象。
+	//3. 创建engine对象。
+
 	//4）设置engine的信号捕获及处理方法。
 	//5）加载builtins。
 	//6）使用goroutine加载daemon对象并运行。

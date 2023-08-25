@@ -30,6 +30,7 @@ type Config struct {
 	FixedCIDR    string   // 指定默认网桥的子网地址
 }
 
+// todo init
 func (config *Config) InitialFlags(context *cli.Context) {
 	config.PidFile = context.String("pidfile")
 	config.Root = context.String("graph")
