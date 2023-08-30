@@ -1,6 +1,7 @@
 package engine
 
 import (
+	"fmt"
 	"github.com/Nevermore12321/dockergsh/internal/utils"
 	"io"
 	"os"
@@ -36,7 +37,13 @@ type Engine struct {
 	onShutdown []func()           // 如果需要关闭的逻辑处理，在这里定义 handler
 }
 
+// Register engine 注册一个 Job，其实就是在 engine 的 handlers 中加一个 job
 func (eng *Engine) Register(name string, handler Handler) error {
+	_, exists := eng.handlers[name]
+	if exists {
+		return fmt.Errorf("Can't register a existed job %s", name)
+	}
+	eng.handlers[name] = handler
 	return nil
 }
 
