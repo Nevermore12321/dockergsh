@@ -4,6 +4,7 @@ import (
 	"github.com/Nevermore12321/dockergsh/client"
 	service "github.com/Nevermore12321/dockergsh/cmd"
 	"github.com/Nevermore12321/dockergsh/daemongsh/daemon"
+	"github.com/Nevermore12321/dockergsh/internal/engine"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 	"io"
@@ -179,8 +180,10 @@ func mainDaemon(context *cli.Context) {
 		return
 	}
 	//3. 创建engine对象。
+	eng := engine.New()
 
 	//4）设置engine的信号捕获及处理方法。
+
 	//5）加载builtins。
 	//6）使用goroutine加载daemon对象并运行。
 	//7）打印Docker版本及驱动信息。

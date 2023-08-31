@@ -5,32 +5,13 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
+	"github.com/Nevermore12321/dockergsh/internal/utils"
 	"github.com/Nevermore12321/dockergsh/pkg/parse"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 	"os"
 	"path/filepath"
 	"strings"
-)
-
-// dockergsh dockergsh 相关默认值
-const (
-	DEFAULTHTTPHOST   = "127.0.0.1"
-	DEFAULTUNIXSOCKET = "/var/run/docker.sock"
-)
-
-// dockergsh dockergsh 相关的环境变量名称
-const (
-	DOCKERGSH_DEBUG       = "DOCKERGSH_DEBUG"
-	DOCKERGSH_CONFIG_HOST = "DOCKERGSH_CONFIG_HOST"
-	DOCKERGSH_SERVER_HOST = "DOCKERGSH_SERVER_HOST"
-)
-
-var (
-	dockerCertPath  = os.Getenv("DOCKERGSH_CERT_PATH")
-	defaultCaFile   = "ca.pem"
-	defaultKeyFile  = "key.pem"
-	defaultCertFile = "cert.pem"
 )
 
 var (
@@ -53,17 +34,17 @@ func CmdFlags() []cli.Flag {
 		&cli.StringFlag{
 			Name:  "tls-cacert",
 			Usage: "Trust only remotes providing a certificate signed by the CA given here",
-			Value: filepath.Join(dockerCertPath, defaultCaFile),
+			Value: filepath.Join(utils.DockerCertPath, utils.DefaultCaFile),
 		},
 		&cli.StringFlag{
 			Name:  "tls-cert",
 			Usage: "Path to TLS certificate file",
-			Value: filepath.Join(dockerCertPath, defaultCertFile),
+			Value: filepath.Join(utils.DockerCertPath, utils.DefaultCertFile),
 		},
 		&cli.StringFlag{
 			Name:  "tls-key",
 			Usage: "Path to TLS key file",
-			Value: filepath.Join(dockerCertPath, defaultKeyFile),
+			Value: filepath.Join(utils.DockerCertPath, utils.DefaultKeyFile),
 		},
 		&cli.StringSliceFlag{
 			Name:  "hosts",
@@ -75,7 +56,7 @@ func CmdFlags() []cli.Flag {
 func PreCheckConfDebug(context *cli.Context) error {
 	// debug为真，设置 DOCKERGSH_DEBUG 环境变量为 1
 	if context.Bool("debug") {
-		if err := os.Setenv(DOCKERGSH_DEBUG, "1"); err != nil {
+		if err := os.Setenv(utils.DOCKERGSH_DEBUG, "1"); err != nil {
 			return err
 		}
 	}
@@ -87,9 +68,9 @@ func PreCheckConfHost(context *cli.Context) ([]string, error) {
 	hosts := context.StringSlice("hosts")
 	if len(hosts) == 0 { // 如果没有传入 hosts 地址
 		// 首先获取 DOCKERGSH_HOST 环境变量的值
-		defaultHost := os.Getenv(DOCKERGSH_CONFIG_HOST)
+		defaultHost := os.Getenv(utils.DOCKERGSH_CONFIG_HOST)
 		if defaultHost == "" {
-			defaultHost = fmt.Sprintf("unix://%s", DEFAULTUNIXSOCKET)
+			defaultHost = fmt.Sprintf("unix://%s", utils.DEFAULTUNIXSOCKET)
 		}
 
 		hosts = append(hosts, defaultHost)
@@ -106,7 +87,7 @@ func PreCheckConfHost(context *cli.Context) ([]string, error) {
 		return nil, err
 	}
 
-	if err := os.Setenv(DOCKERGSH_SERVER_HOST, host); err != nil {
+	if err := os.Setenv(utils.DOCKERGSH_SERVER_HOST, host); err != nil {
 		return nil, err
 	}
 
@@ -158,7 +139,7 @@ func RootBefore(context *cli.Context) error {
 }
 
 func ValidateHost(host string) (string, error) {
-	parsedHost, err := parse.ParseHost(host, DEFAULTHTTPHOST, DEFAULTUNIXSOCKET)
+	parsedHost, err := parse.ParseHost(host, utils.DEFAULTHTTPHOST, utils.DEFAULTUNIXSOCKET)
 	if err != nil {
 		return host, err
 	}
