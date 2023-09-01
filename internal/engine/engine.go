@@ -38,6 +38,7 @@ type Engine struct {
 }
 
 // Register engine 注册一个 Job，其实就是在 engine 的 handlers 中加一个 job
+// 向eng对象注册处理方法，并不代表处理方法的值函数会被立即调用执行
 func (eng *Engine) Register(name string, handler Handler) error {
 	_, exists := eng.handlers[name]
 	if exists {
@@ -55,6 +56,16 @@ func (eng *Engine) commands() []string {
 	}
 	sort.Strings(names)
 	return names
+}
+
+// engine 关闭：
+// Daemon不再接受任何新的Job
+// Daemon等待所有存活的Job执行完毕
+// Daemon调用所有shutdown的处理方法
+// 在15秒时间内，若所有的handler执行完毕，则Shutdown（）函数返回，否则强制返回。
+// 以先发生者为准。
+func (eng *Engine) Shutdown() {
+	return
 }
 
 // New 创建 Engine 实例对象

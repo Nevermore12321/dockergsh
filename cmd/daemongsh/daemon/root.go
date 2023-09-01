@@ -5,6 +5,7 @@ import (
 	service "github.com/Nevermore12321/dockergsh/cmd"
 	"github.com/Nevermore12321/dockergsh/daemongsh/daemon"
 	"github.com/Nevermore12321/dockergsh/internal/engine"
+	"github.com/Nevermore12321/dockergsh/pkg/signal"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 	"io"
@@ -183,8 +184,11 @@ func mainDaemon(context *cli.Context) {
 	eng := engine.New()
 
 	//4）设置engine的信号捕获及处理方法。
+	signal.Trap(eng.Shutdown)
 
 	//5）加载builtins。
+	// builtins 表示 Daemon运行过程中，注册的一些任务（Job），这部分任务一般与容器的运行无关，与 Daemon的运行时信息有关
+
 	//6）使用goroutine加载daemon对象并运行。
 	//7）打印Docker版本及驱动信息。
 	//8）serveapi的创建与运行。
