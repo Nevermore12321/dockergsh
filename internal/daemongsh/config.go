@@ -1,4 +1,4 @@
-package daemon
+package daemongsh
 
 import (
 	"github.com/urfave/cli/v2"

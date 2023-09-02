@@ -1,6 +1,10 @@
 package builtins
 
-import "github.com/Nevermore12321/dockergsh/internal/engine"
+import (
+	"github.com/Nevermore12321/dockergsh/internal/engine"
+	"github.com/Nevermore12321/dockergsh/internal/events"
+	"github.com/Nevermore12321/dockergsh/internal/registry"
+)
 
 // 加载 builtins，向 engine 注册多个 Handler，以便后续在执行相应任务时，运行指定的 Handler
 // 这些Handler包括：Docker Daemon宿主机的网络初始化、Web API服务、事件查询、版本查看、Docker Registry的验证与搜索等
@@ -25,6 +29,8 @@ func Register(eng *engine.Engine) error {
 		return err
 	}
 
+	// 5. 注册registry(镜像仓库)处理方法
+	return registry.NewService().Install(eng)
 }
 
 // 网络初始化 job
@@ -50,5 +56,6 @@ func remote(eng *engine.Engine) error {
 // dockergshVersion 会向名为version的Job的标准输出中写入:
 // Docker的版本、Docker API的版本、git版本、Go语言运行时版本，以及操作系统版本等信息
 func dockergshVersion() error {
-
+	// todo
+	return nil
 }

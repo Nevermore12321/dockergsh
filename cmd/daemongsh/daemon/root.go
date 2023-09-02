@@ -3,17 +3,20 @@ package daemon
 import (
 	"github.com/Nevermore12321/dockergsh/client"
 	service "github.com/Nevermore12321/dockergsh/cmd"
-	"github.com/Nevermore12321/dockergsh/daemongsh/daemon"
+	"github.com/Nevermore12321/dockergsh/internal/builtins"
+	"github.com/Nevermore12321/dockergsh/internal/daemongsh"
 	"github.com/Nevermore12321/dockergsh/internal/engine"
+	"github.com/Nevermore12321/dockergsh/internal/utils"
 	"github.com/Nevermore12321/dockergsh/pkg/signal"
 	"github.com/sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 	"io"
 )
 
 var (
 	RootCmd   = cli.NewApp()
-	daemonCfg = &daemon.Config{}
+	daemonCfg = &daemongsh.Config{}
 )
 
 func RootCmdInitial(name string, in io.Reader, out, err io.Writer) {
@@ -186,10 +189,39 @@ func mainDaemon(context *cli.Context) {
 	//4）设置engine的信号捕获及处理方法。
 	signal.Trap(eng.Shutdown)
 
-	//5）加载builtins。
-	// builtins 表示 Daemon运行过程中，注册的一些任务（Job），这部分任务一般与容器的运行无关，与 Daemon的运行时信息有关
+	//5）加载builtins。给 engine 注册不同的任务job
+	if err := builtins.Register(eng); err != nil {
+		log.Fatal(err)
+	}
 
 	//6）使用goroutine加载daemon对象并运行。
+	go func() {
+		// 6.1 创建daemon对象
+		// 初始化基本环境，如处理config参数，验证系统支持度，配置Docker工作目录，设置与加载多种驱动，创建graph环境，验证DNS配置等
+		daemon, err := daemongsh.NewDaemon(daemonCfg, eng)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		// 6.2 通过daemon对象为engine注册Handler
+		if err := daemon.Install(eng); err != nil {
+			log.Fatal(err)
+		}
+
+		// 6.3 创建名为acceptconnections的Job，并且开始运行
+		if err := eng.Job("acceptconnections").Run(); err != nil {
+			log.Fatal(err)
+		}
+	}()
+
 	//7）打印Docker版本及驱动信息。
+	log.Printf("docker daemon: %s %s; execdriver: %s; graphdriver: %s",
+		utils.VERSION,
+		utils.GITCOMMIT,
+		daemonCfg.ExecDriver,
+		daemonCfg.GraphDriver,
+	)
+
 	//8）serveapi的创建与运行。
+	
 }

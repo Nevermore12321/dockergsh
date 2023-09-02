@@ -3,9 +3,11 @@ package engine
 import (
 	"fmt"
 	"github.com/Nevermore12321/dockergsh/internal/utils"
+	log "github.com/sirupsen/logrus"
 	"io"
 	"os"
 	"sort"
+	"strings"
 	"sync"
 )
 
@@ -58,7 +60,7 @@ func (eng *Engine) commands() []string {
 	return names
 }
 
-// engine 关闭：
+// Shutdown engine 关闭：
 // Daemon不再接受任何新的Job
 // Daemon等待所有存活的Job执行完毕
 // Daemon调用所有shutdown的处理方法
@@ -66,6 +68,60 @@ func (eng *Engine) commands() []string {
 // 以先发生者为准。
 func (eng *Engine) Shutdown() {
 	return
+}
+
+// 判断 dockergsh 引擎 engine 是否已经被关闭
+func (eng *Engine) IsShutdown() bool {
+	// 加读锁
+	eng.lck.RLock()
+	defer eng.lck.RUnlock()
+	// 返回 engine 对象的 shutdown 字段，表示已经关闭
+	return eng.shutdown
+}
+
+// 初始化 Job 作业对象
+func (eng *Engine) Job(name string, args ...string) *Job {
+	job := &Job{
+		Eng:    eng,
+		Name:   name,
+		Args:   args,
+		Stdin:  NewInput(),
+		Stdout: NewOutput(),
+		Stderr: NewOutput(),
+		env:    &Env{},
+	}
+	// 如果engine 开启了日志，添加 job 的日志输出
+	// todo
+	if eng.Logging {
+		job.Stderr.Add()
+	}
+
+	// 在 engine 的 hanlers 任务作业Job列表中寻找当前 job
+	if hanler, exits := eng.handlers[name]; exits {
+		// 添加 handler 到 job 对象中
+		job.handler = hanler
+	} else if eng.catchall != nil && name != "" { // 名称不能为空，
+		// 如果不存在该 job 的 handler
+		job.handler = eng.catchall
+	}
+	return job
+}
+
+// engine 打印输出格式，取 id 的前8位
+func (eng *Engine) String() string {
+	return fmt.Sprintf("%s", eng.id[:8])
+}
+
+// Logf engine 的日志打印方法
+func (eng *Engine) Logf(format string, args ...interface{}) (int, error) {
+	// 如果日志没有打开
+	if !eng.Logging {
+		return 0, nil
+	}
+
+	// 打印时添加 [engine_id] 的前缀
+	prefixedFormat := fmt.Sprintf("[%s] %s\n", eng, strings.TrimRight(format, "\n"))
+	return fmt.Fprintf(eng.Stdout, prefixedFormat, args...)
 }
 
 // New 创建 Engine 实例对象
@@ -81,13 +137,16 @@ func New() *Engine {
 	}
 
 	// 向eng对象注册名为commands的Handler
-	eng.Register("commands", func(job *Job) Status {
+	err := eng.Register("commands", func(job *Job) Status {
 		//	作用是通过Job来打印所有已经注册完毕的command名称，最终返回状态StatusOK
 		for _, name := range eng.commands() {
 			job.Printf("%s\n", name)
 		}
 		return StatusOk
 	})
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	// 将变量globalHandlers中定义完毕的所有Handler都复制到eng对象的handlers属性中
 	for k, v := range globalHandlers {
