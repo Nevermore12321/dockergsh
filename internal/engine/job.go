@@ -134,7 +134,39 @@ func (job *Job) Run() error {
 	return nil
 }
 
-// Job 作业的 错误日志
+/* **************** ENV 环境变量相关 **************** */
+
+// Env 返回当前 job 的环境变量信息
+func (job *Job) Env() *Env {
+	return job.env
+}
+
+// SetEnvBool 设置 job 的环境变量(bool类型)
+func (job *Job) SetEnvBool(key string, value bool) {
+	job.env.SetBool(key, value)
+}
+
+// GetEnvBool 获取 job 的环境变量(bool类型)
+func (job *Job) GetEnvBool(key string) bool {
+	return job.env.GetBool(key)
+}
+
+// SetEnv 设置 job 的环境变量(string类型)
+func (job *Job) SetEnv(key, value string) {
+	job.env.Set(key, value)
+}
+
+// GetEnv 获取 job 的环境变量(string类型)
+func (job *Job) GetEnv(key string) string {
+	return job.env.Get(key)
+}
+
+// Printf Job 作业的 日志打印
+func (job *Job) Printf(format string, args ...interface{}) (n int, err error) {
+	return fmt.Fprintf(job.Stdout, format, args...)
+}
+
+// Errorf Job 作业的 错误日志
 func (job *Job) Errorf(format string, args ...any) Status {
 	format = strings.TrimRight(format, "\n")
 	fmt.Fprintf(job.Stderr, format+"\n", args...)

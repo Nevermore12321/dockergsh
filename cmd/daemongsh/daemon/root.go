@@ -223,5 +223,9 @@ func mainDaemon(context *cli.Context) {
 	)
 
 	//8）serveapi的创建与运行。
-	
+	// 8.1 hosts 为 Dockergsh Daemon提供使用的协议与监听的地址
+	job := eng.Job("serveapi", context.StringSlice("hosts")...)
+	// 8.2 设置环境变量
+	job.SetEnvBool("Logging", true)
+	job.SetEnvBool("Enable")
 }

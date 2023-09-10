@@ -79,7 +79,7 @@ func (eng *Engine) IsShutdown() bool {
 	return eng.shutdown
 }
 
-// 初始化 Job 作业对象
+// 创建并初始化 Job 作业对象
 func (eng *Engine) Job(name string, args ...string) *Job {
 	job := &Job{
 		Eng:    eng,

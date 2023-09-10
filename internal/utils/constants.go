@@ -21,3 +21,17 @@ var (
 	DefaultKeyFile  = "key.pem"
 	DefaultCertFile = "cert.pem"
 )
+
+/* ============ServeApi 环境变量名称================= */
+const (
+	Logging        = "DOCKERGSH_Logging"
+	EnableCors     = "DOCKERGSH_EnableCors"
+	Version        = "DOCKERGSH_Version"
+	SocketGroup    = "DOCKERGSH_SocketGroup"
+	Tls            = "DOCKERGSH_Tls"
+	TlsVerify      = "DOCKERGSH_TlsVerify"
+	TlsCa          = "DOCKERGSH_TlsCa"
+	TlsCert        = "DOCKERGSH_TlsCert"
+	TlsKey         = "DOCKERGSH_TlsKey"
+	BufferRequests = "DOCKERGSH_BufferRequests"
+)
