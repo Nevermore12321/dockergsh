@@ -175,7 +175,7 @@ func daemongshFlags() []cli.Flag {
 }
 
 // daemongsh 的启动流程
-func mainDaemon(context *cli.Context) {
+func mainDaemon(context *cli.Context, hosts []string) {
 	// 1.daemon的配置初始化
 	daemonCfg.InitialFlags(context)
 
@@ -198,7 +198,7 @@ func mainDaemon(context *cli.Context) {
 	go func() {
 		// 6.1 创建daemon对象
 		// 初始化基本环境，如处理config参数，验证系统支持度，配置Docker工作目录，设置与加载多种驱动，创建graph环境，验证DNS配置等
-		daemon, err := daemongsh.NewDaemon(daemonCfg, eng)
+		daemon, err := daemongsh.NewDaemongsh(daemonCfg, eng)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -224,8 +224,22 @@ func mainDaemon(context *cli.Context) {
 
 	//8）serveapi的创建与运行。
 	// 8.1 hosts 为 Dockergsh Daemon提供使用的协议与监听的地址
-	job := eng.Job("serveapi", context.StringSlice("hosts")...)
+	job := eng.Job("serveapi", hosts...)
 	// 8.2 设置环境变量
-	job.SetEnvBool("Logging", true)
-	job.SetEnvBool("Enable")
+	job.SetEnvBool(utils.Logging, true)
+	job.SetEnvBool(utils.EnableCors, context.Bool("api-enable-cors"))
+	job.SetEnv(utils.Version, utils.VERSION)
+	job.SetEnv(utils.SocketGroup, context.String("socket-group"))
+
+	job.SetEnvBool(utils.Tls, context.Bool("tls"))
+	job.SetEnvBool(utils.TlsVerify, context.Bool("tls-verify"))
+	job.SetEnv(utils.TlsCa, context.String("tls-cacert"))
+	job.SetEnv(utils.TlsCert, context.String("tls-cert"))
+	job.SetEnv(utils.TlsKey, context.String("tls-key"))
+	job.SetEnvBool(utils.BufferRequests, true)
+
+	// 8.3 运行 job
+	if err := job.Run(); err != nil {
+		log.Fatal(err)
+	}
 }

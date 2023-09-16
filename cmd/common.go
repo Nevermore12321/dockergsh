@@ -27,6 +27,22 @@ func CmdFlags() []cli.Flag {
 			Value:   false,
 		},
 		&cli.BoolFlag{
+			Name:  "api-enable-cors",
+			Usage: "Enable CORS headers in the remote API",
+			Value: false,
+		},
+		&cli.StringFlag{
+			Name:    "socket-group",
+			Aliases: []string{"G"},
+			Usage:   "Group to assign the unix socket specified by -H when running in daemon mode\nuse '' (the empty string) to disable setting of a group",
+			Value:   "docker",
+		},
+		&cli.BoolFlag{
+			Name:  "tls",
+			Usage: "Use TLS; implied by tls-verify flags",
+			Value: false,
+		},
+		&cli.BoolFlag{
 			Name:  "tls-verify",
 			Usage: "Use TLS and verify the remote",
 			Value: false,
