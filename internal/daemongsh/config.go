@@ -1,6 +1,7 @@
 package daemongsh
 
 import (
+	"github.com/Nevermore12321/dockergsh/internal/daemongsh/networkdriver"
 	"github.com/urfave/cli/v2"
 	"net"
 )
@@ -48,4 +49,14 @@ func (config *Config) InitialFlags(context *cli.Context) {
 	config.PidFile = context.String("pidfile")
 	config.PidFile = context.String("pidfile")
 	config.PidFile = context.String("pidfile")
+}
+
+// GetDefaultNetworkMtu 获取 default 路由的默认 mtu 配置
+func GetDefaultNetworkMtu() int {
+	// 获取到 default 路由网卡信息，即 ip route 的第一条 default 信息
+	iface, err := networkdriver.GetDefaultRouteIface()
+	if err != nil {
+		return networkdriver.DefaultNetworkMtu
+	}
+	return iface.MTU
 }

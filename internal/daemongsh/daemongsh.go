@@ -1,6 +1,11 @@
 package daemongsh
 
-import "github.com/Nevermore12321/dockergsh/internal/engine"
+import (
+	"fmt"
+	"github.com/Nevermore12321/dockergsh/internal/daemongsh/networkdriver"
+	"github.com/Nevermore12321/dockergsh/internal/engine"
+	"github.com/Nevermore12321/dockergsh/internal/utils"
+)
 
 /*
 在 Dockergsh架构中 Daemongsh 支撑着整个后台进程的运行，
@@ -28,8 +33,53 @@ func NewDaemongshFromDirectory(config *Config, eng *engine.Engine) (*Daemongsh, 
 		// 设置一个默认值
 		config.Mtu = GetDefaultNetworkMtu()
 	}
-	// 1.2 检测网桥配置信息
-	// 1.3 查验容器间的通信配置
-	// 1.4 处理 PID 文件配置
+	// 1.2 检测网桥配置信息，即 BridgeIface 和 BridgeIP
+	// BridgeIface 和 BridgeIP 的作用是为创建网桥的任务 init_networkdriver 提供参数r
+	if config.BridgeIp != "" && config.BridgeIface != "" {
+		// 若config中BridgeIface和BridgeIP两个属性均不为空，则返回nil对象，并返回错误信息
+		/*
+			原因：
+				1. 当用户为Docker网桥选定已经存在的网桥接口时，应该沿用已有网桥的当前IP地址，不应再提供IP地址；
+				2. 当用户不选已经存在的网桥接口作为Docker网桥时，Docker会另行创建一个全新的网桥接口作为Docker网桥，此时用户可以为此新创建的网桥接口设定自定义IP地址；
+				3. 当然两者都不选的话，Docker会为用户接管完整的Docker网桥创建流程，从创建默认的网桥接口，到尾网桥接口设置默认的IP地址
+		*/
+		return nil, fmt.Errorf("You specified -b & --bip, mutually exclusive options. Please specify only one.")
+	}
 
+	// 1.3 查验容器间的通信配置，即 EnableIptables 和 Inter-Container Communication 属性
+	if !config.EnableIptables && !config.InterContainerCommunication {
+		/*
+			EnableIptables属性主要来源于flag参数--iptables
+				它的作用是：在DockerDaemon启动时，是否对宿主机的iptables规则作修改
+			InterContainerCommunication属性来源于flag参数--icc
+				它的作用是：在Docker Daemon启动时，是否开启Docker容器之间互相通信的功能
+
+			容器间通信依赖与 iptables：
+				1. 若 InterContainerCommunication 的值为false，则Docker Daemon会在宿主机iptables的FORWARD链中添加一条Docker容器间流量均DROP的规则；
+				2. 若 InterContainerCommunication 为true，则Docker Daemon会在宿主机iptables的FORWARD链中添加一条Docker容器间流量均ACCEPT的规则。
+		*/
+		return nil, fmt.Errorf("You specified --iptables=false with --icc=false. ICC uses iptables to function. Please set --icc or --iptables to true.")
+	}
+
+	// 1.4 网络相关配置，即 DisableNetwork 属性
+	/*
+		后续创建并执行创建Docker Daemon网络环境时会使用此属性，即在名为init_networkdriver的Job创建并运行中体现
+
+	*/
+	config.DisableNetwork = networkdriver.DisableNetworkBridge == config.BridgeIface
+
+	// 1.5 处理 PID 文件配置
+	if config.PidFile != "" {
+		/*
+			1. 为运行时 Daemongsh 进程的 PID 号创建一个 PID 文件，文件的路径即为 config中的P idfile 属性，
+			2. 并且为 Daemongsh 的shutdown操作添加一个删除此Pidfile的函数，以便在 Daemongsh 退出的时候，可以在第一时间删除 Pidfile
+		*/
+		if err := utils.CreatePidFile(config.PidFile); err != nil {
+			return nil, err
+		}
+		eng.OnShutdown(func() {
+			// 始终在结束时，删除 pid 文件
+			utils.RemovePidFile(config.PidFile)
+		})
+	}
 }

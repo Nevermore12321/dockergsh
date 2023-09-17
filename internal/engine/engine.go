@@ -70,6 +70,13 @@ func (eng *Engine) Shutdown() {
 	return
 }
 
+// 向 engine 中注册一个 shutdown 时的回调函数
+func (eng *Engine) OnShutdown(h func()) {
+	eng.lck.Lock()
+	eng.onShutdown = append(eng.onShutdown, h)
+	eng.lck.Unlock()
+}
+
 // 判断 dockergsh 引擎 engine 是否已经被关闭
 func (eng *Engine) IsShutdown() bool {
 	// 加读锁
