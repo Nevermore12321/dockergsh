@@ -5,6 +5,9 @@ import (
 	"github.com/Nevermore12321/dockergsh/internal/daemongsh/networkdriver"
 	"github.com/Nevermore12321/dockergsh/internal/engine"
 	"github.com/Nevermore12321/dockergsh/internal/utils"
+	log "github.com/sirupsen/logrus"
+	"os"
+	"runtime"
 )
 
 /*
@@ -82,4 +85,31 @@ func NewDaemongshFromDirectory(config *Config, eng *engine.Engine) (*Daemongsh, 
 			utils.RemovePidFile(config.PidFile)
 		})
 	}
+
+	/* -------------- */
+	// 2. 检测系统支持及用户权限
+	// 2.1 操作系统类型对 Daemongsh 的支持；runtime.GOOS返回运行程序所在操作系统的类型
+	if runtime.GOOS != "linux" {
+		// 目前只能支持 linux 系统
+		log.Fatalf("The Dockergsh daemongsh is only supported on linux")
+	}
+	// 2.2 用户权限的级别；os.Geteuid() 返回调用者所在组的组id
+	if os.Geteuid() != 0 {
+		// 需要使用 root 用户执行
+		log.Fatalf("The Dockergsh daemongsh needs to be run as root")
+	}
+	// 2.3 检测内核的版本以及主机处理器类型
+	if err := checkKernelAndArch(); err != nil {
+		log.Fatalf(err.Error())
+	}
+}
+
+// 检测内核的版本以及主机处理器类型
+func checkKernelAndArch() error {
+	// 检测内核的版本以及主机处理器类型, 目前支持 amd64
+	if runtime.GOARCH != "amd64" {
+		return fmt.Errorf("The Dockergsh runtime currently only supports amd64 (not %s). This will change in the future. Aborting.", runtime.GOARCH)
+	}
+
+	// 检测Linux内核版本是否满足要求，建议用户升级内核版本至3.8.0或以上版本
 }

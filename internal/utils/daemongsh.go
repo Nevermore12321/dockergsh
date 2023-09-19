@@ -18,7 +18,7 @@ func CreatePidFile(pidFile string) error {
 			// 检查是否有 pid 号进程运行文件
 			if _, err := os.Stat(fmt.Sprintf("/proc/%d/", pid)); err == nil {
 				// 如果有 pid 运行文件，报错返回
-				return fmt.Errorf("pid file found, ensure docker is not running or delete %s", pidfile)
+				return fmt.Errorf("pid file found, ensure dockergsh is not running or delete %s", pidFile)
 			}
 		}
 	}

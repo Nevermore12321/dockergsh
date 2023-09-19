@@ -70,14 +70,15 @@ func (eng *Engine) Shutdown() {
 	return
 }
 
-// 向 engine 中注册一个 shutdown 时的回调函数
+// OnShutdown 向 engine 中注册一个 shutdown 时的回调函数
 func (eng *Engine) OnShutdown(h func()) {
 	eng.lck.Lock()
+	// 添加到 engine 中的 onShutdown 列表
 	eng.onShutdown = append(eng.onShutdown, h)
 	eng.lck.Unlock()
 }
 
-// 判断 dockergsh 引擎 engine 是否已经被关闭
+// IsShutdown 判断 dockergsh 引擎 engine 是否已经被关闭
 func (eng *Engine) IsShutdown() bool {
 	// 加读锁
 	eng.lck.RLock()
@@ -86,7 +87,7 @@ func (eng *Engine) IsShutdown() bool {
 	return eng.shutdown
 }
 
-// 创建并初始化 Job 作业对象
+// Job 创建并初始化 Job 作业对象
 func (eng *Engine) Job(name string, args ...string) *Job {
 	job := &Job{
 		Eng:    eng,
