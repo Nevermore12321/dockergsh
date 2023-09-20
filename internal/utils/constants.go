@@ -35,3 +35,8 @@ const (
 	TlsKey         = "DOCKERGSH_TlsKey"
 	BufferRequests = "DOCKERGSH_BufferRequests"
 )
+
+/* ==============daemongsh 相关====================*/
+const (
+	NowarnKernelVersion = "DOCKERGSH_NOWARN_KERNEL_VERSION"
+)

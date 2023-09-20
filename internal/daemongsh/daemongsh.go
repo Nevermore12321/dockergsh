@@ -5,6 +5,7 @@ import (
 	"github.com/Nevermore12321/dockergsh/internal/daemongsh/networkdriver"
 	"github.com/Nevermore12321/dockergsh/internal/engine"
 	"github.com/Nevermore12321/dockergsh/internal/utils"
+	"github.com/Nevermore12321/dockergsh/pkg/parse/kernel"
 	log "github.com/sirupsen/logrus"
 	"os"
 	"runtime"
@@ -112,4 +113,16 @@ func checkKernelAndArch() error {
 	}
 
 	// 检测Linux内核版本是否满足要求，建议用户升级内核版本至3.8.0或以上版本
+	// 先获取当前系统的版本信息
+	if kv, err := kernel.GetKernelVersion(); err != nil {
+		log.Warning(err)
+	} else {
+		// 如果版本小于 3.8.0
+		if kernel.CompareKernelVersion(kv, &kernel.KernelVersionInfo{Kernel: 3, Major: 8, Minor: 0}) < 0 {
+			// 如果不可以容忍低版本运行 daemongsh
+			if os.Getenv(utils.NowarnKernelVersion) == "" {
+				log.Warnf("You are running linux kernel version %s, which might be unstable running docker. Please upgrade your kernel to 3.8.0.", kv.String())
+			}
+		}
+	}
 }
