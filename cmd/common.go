@@ -50,17 +50,17 @@ func CmdFlags() []cli.Flag {
 		&cli.StringFlag{
 			Name:  "tls-cacert",
 			Usage: "Trust only remotes providing a certificate signed by the CA given here",
-			Value: filepath.Join(utils.DockerCertPath, utils.DefaultCaFile),
+			Value: filepath.Join(utils.DockergshCertPath, utils.DefaultCaFile),
 		},
 		&cli.StringFlag{
 			Name:  "tls-cert",
 			Usage: "Path to TLS certificate file",
-			Value: filepath.Join(utils.DockerCertPath, utils.DefaultCertFile),
+			Value: filepath.Join(utils.DockergshCertPath, utils.DefaultCertFile),
 		},
 		&cli.StringFlag{
 			Name:  "tls-key",
 			Usage: "Path to TLS key file",
-			Value: filepath.Join(utils.DockerCertPath, utils.DefaultKeyFile),
+			Value: filepath.Join(utils.DockergshCertPath, utils.DefaultKeyFile),
 		},
 		&cli.StringSliceFlag{
 			Name:  "hosts",

@@ -88,6 +88,7 @@ func NewDaemongshFromDirectory(config *Config, eng *engine.Engine) (*Daemongsh, 
 	}
 
 	/* -------------- */
+
 	// 2. 检测系统支持及用户权限
 	// 2.1 操作系统类型对 Daemongsh 的支持；runtime.GOOS返回运行程序所在操作系统的类型
 	if runtime.GOOS != "linux" {
@@ -103,6 +104,27 @@ func NewDaemongshFromDirectory(config *Config, eng *engine.Engine) (*Daemongsh, 
 	if err := checkKernelAndArch(); err != nil {
 		log.Fatalf(err.Error())
 	}
+
+	/* -------------- */
+	// 3.配置工作目录
+	// 3.1 使用规范路径创建一个TempDir，路径名为 tmp
+	tmp, err := utils.TempDir(config.Root)
+	if err != nil {
+		log.Fatalf("Unable to get the TempDir under %s: %s", config.Root, err)
+	}
+	// 3.2 通过tmp，找到一个指向 tmp 的文件符号连接的 目标文件 realTmp
+	realTmp, err := utils.ReadSymlinkedDirectory(tmp)
+	if err != nil {
+		log.Fatalf("Unable to get the full path to the TempDir (%s): %s", tmp, err)
+	}
+	// 3.3 使用realTemp的值，创建并赋值给环境变量TMPDIR
+	os.Setenv(utils.DaemongshTempdir, realTmp)
+	// 3.4 处理config的属性EnableSelinuxSupport,如果不开启 selinux，将其关闭
+	if !config.EnableSelinuxSupport {
+
+	}
+	// 3.5 将realRoot重新赋值于config.Root，并创建Docker Daemon的工作根目录。
+
 }
 
 // 检测内核的版本以及主机处理器类型

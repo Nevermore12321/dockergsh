@@ -16,10 +16,10 @@ const (
 )
 
 var (
-	DockerCertPath  = os.Getenv("DOCKERGSH_CERT_PATH")
-	DefaultCaFile   = "ca.pem"
-	DefaultKeyFile  = "key.pem"
-	DefaultCertFile = "cert.pem"
+	DockergshCertPath = os.Getenv("DOCKERGSH_CERT_PATH")
+	DefaultCaFile     = "ca.pem"
+	DefaultKeyFile    = "key.pem"
+	DefaultCertFile   = "cert.pem"
 )
 
 /* ============ServeApi 环境变量名称================= */
@@ -39,4 +39,6 @@ const (
 /* ==============daemongsh 相关====================*/
 const (
 	NowarnKernelVersion = "DOCKERGSH_NOWARN_KERNEL_VERSION"
+	ConfigTempdir       = "DOCKERGSH_TMPDIR"
+	DaemongshTempdir    = "TEMPDIR"
 )
