@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 )
 
+// 创建临时目录
 func TempDir(rootDir string) (string, error) {
 	var tmpDir string
 	if tmpDir = os.Getenv(ConfigTempdir); tmpDir == "" {

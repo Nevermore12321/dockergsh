@@ -121,9 +121,23 @@ func NewDaemongshFromDirectory(config *Config, eng *engine.Engine) (*Daemongsh, 
 	os.Setenv(utils.DaemongshTempdir, realTmp)
 	// 3.4 处理config的属性EnableSelinuxSupport,如果不开启 selinux，将其关闭
 	if !config.EnableSelinuxSupport {
-
+		selinuxSetDisabled()
 	}
 	// 3.5 将realRoot重新赋值于config.Root，并创建Docker Daemon的工作根目录。
+	var realRoot string
+	if _, err := os.Stat(config.Root); err != nil && os.IsNotExist(err) { // config.Root 路径不存在
+		realRoot = config.Root
+	} else { // config.Root 路径存在
+		realRoot, err = utils.ReadSymlinkedDirectory(config.Root)
+		if err != nil {
+			log.Fatalf("Unable to get the full path to root (%s): %s", config.Root, err)
+		}
+	}
+	config.Root = realRoot
+
+	if err := os.MkdirAll(config.Root, 0700); err != nil && !os.IsExist(err) { // 如果 root 不存在创建目录
+		return nil, err
+	}
 
 }
 
