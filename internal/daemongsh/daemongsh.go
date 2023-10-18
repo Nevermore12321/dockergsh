@@ -2,6 +2,7 @@ package daemongsh
 
 import (
 	"fmt"
+	"github.com/Nevermore12321/dockergsh/internal/daemongsh/graphdriver"
 	"github.com/Nevermore12321/dockergsh/internal/daemongsh/networkdriver"
 	"github.com/Nevermore12321/dockergsh/internal/engine"
 	"github.com/Nevermore12321/dockergsh/internal/utils"
@@ -139,6 +140,17 @@ func NewDaemongshFromDirectory(config *Config, eng *engine.Engine) (*Daemongsh, 
 		return nil, err
 	}
 
+	/* -------------- */
+	// 4. 加载并配置 graphdriver
+	// 4.1 配置默认的 graphdriver
+	graphdriver.DefaultDriver = config.GraphDriver
+
+	// 4.2 创建 graphdriver
+	driver, err := graphdriver.New(config.Root, config.GraphOptions)
+	if err != nil {
+		return nil, err
+	}
+	log.Debugf("Using Graph Driver %s", driver)
 }
 
 // 检测内核的版本以及主机处理器类型

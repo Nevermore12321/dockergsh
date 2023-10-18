@@ -41,4 +41,5 @@ const (
 	NowarnKernelVersion = "DOCKERGSH_NOWARN_KERNEL_VERSION"
 	ConfigTempdir       = "DOCKERGSH_TMPDIR"
 	DaemongshTempdir    = "TEMPDIR"
+	GraphDriver         = "DOCKDERGSH_GRAPHDRIVER"
 )
