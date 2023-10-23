@@ -1,5 +1,17 @@
 [TOC]
 
+# 使用
+
+```go
+go build -o dockergsh main.go 
+```
+目前支持的命令：
+- ps
+- run
+- rm
+- network
+- ...
+
 # 自己动手写 docker ，重新实现conteainer的创建管理
 
 
