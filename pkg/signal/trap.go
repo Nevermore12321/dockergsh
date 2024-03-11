@@ -18,7 +18,7 @@ func Trap(cleanup func()) {
 	// 2.1 定义signals数组变量，初始值为os.SIGINT，os.SIGTERM
 	signals := []os.Signal{os.Interrupt, syscall.SIGTERM}
 	// 2.2 若环境变量DEBUG为空，则添加os.SIGQUIT至signals数组
-	if os.Getenv(utils.DOCKERGSH_DEBUG) == "" {
+	if os.Getenv(utils.DockergshDebug) == "" {
 		signals = append(signals, syscall.SIGQUIT)
 	}
 

@@ -17,7 +17,7 @@ type DockerGshClient struct {
 
 var DockerGshCli *DockerGshClient = new(DockerGshClient)
 
-func DockerGshCliInitial(in io.Reader, out, err io.Writer, proto, addr string, tlsConf *tls.Config) {
+func DockergshCliInitial(in io.Reader, out, err io.Writer, proto, addr string, tlsConf *tls.Config) {
 	// 默认值
 	var (
 		scheme = "http"

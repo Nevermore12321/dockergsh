@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/Nevermore12321/dockergsh/cmd/dockergsh/client"
+	"github.com/Nevermore12321/dockergsh/cmd/dockergsh/common"
 	"log"
 	"os"
 	"path/filepath"
@@ -17,10 +17,10 @@ func main() {
 	// 使用文件路径获取文件名
 	cmdName := filepath.Base(exePath)
 	// 配置命令行 app
-	client.RootCmdInitial(cmdName, os.Stdin, os.Stdout, os.Stderr)
+	common.RootCmdInitial(cmdName, os.Stdin, os.Stdout, os.Stderr)
 
 	// 执行命令行 app
-	if err := client.RootCmd.Run(os.Args); err != nil {
+	if err := common.RootCmd.Run(os.Args); err != nil {
 		log.Fatal(err)
 	}
 }

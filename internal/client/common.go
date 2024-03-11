@@ -8,7 +8,6 @@ const (
 
 var (
 	GITCOMMIT string
-	VERSION   string
 )
 
 // dockergsh client 相关的环境变量名称

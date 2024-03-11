@@ -94,12 +94,12 @@ func NewDaemongshFromDirectory(config *Config, eng *engine.Engine) (*Daemongsh, 
 	// 2.1 操作系统类型对 Daemongsh 的支持；runtime.GOOS返回运行程序所在操作系统的类型
 	if runtime.GOOS != "linux" {
 		// 目前只能支持 linux 系统
-		log.Fatalf("The Dockergsh daemongsh is only supported on linux")
+		log.Fatalf("The Dockergsh daemon is only supported on linux")
 	}
 	// 2.2 用户权限的级别；os.Geteuid() 返回调用者所在组的组id
 	if os.Geteuid() != 0 {
 		// 需要使用 root 用户执行
-		log.Fatalf("The Dockergsh daemongsh needs to be run as root")
+		log.Fatalf("The Dockergsh daemon needs to be run as root")
 	}
 	// 2.3 检测内核的版本以及主机处理器类型
 	if err := checkKernelAndArch(); err != nil {
@@ -167,7 +167,7 @@ func checkKernelAndArch() error {
 	} else {
 		// 如果版本小于 3.8.0
 		if kernel.CompareKernelVersion(kv, &kernel.KernelVersionInfo{Kernel: 3, Major: 8, Minor: 0}) < 0 {
-			// 如果不可以容忍低版本运行 daemongsh
+			// 如果不可以容忍低版本运行 daemon
 			if os.Getenv(utils.NowarnKernelVersion) == "" {
 				log.Warnf("You are running linux kernel version %s, which might be unstable running docker. Please upgrade your kernel to 3.8.0.", kv.String())
 			}

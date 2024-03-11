@@ -1,8 +1,8 @@
-package client
+package common
 
 import (
-	gshClient "github.com/Nevermore12321/dockergsh/client"
-	service "github.com/Nevermore12321/dockergsh/cmd"
+	"github.com/Nevermore12321/dockergsh/cmd/dockergsh/subcmds"
+	"github.com/Nevermore12321/dockergsh/internal/client"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 	"io"
@@ -25,41 +25,48 @@ func RootCmdInitial(name string, in io.Reader, out, err io.Writer) {
 	}
 
 	// help 信息
-	RootCmd.Usage = gshClient.GetHelpUsage("")
+	RootCmd.Usage = GetHelpUsage("")
 
 	// 初始化版本
-	RootCmd.Version = gshClient.VERSION
+	RootCmd.Version = VERSION
 
 	// 初始化 RootCmd 的 flags
-	RootCmd.Flags = service.CmdFlags()
+	RootCmd.Flags = cmdCommonFlags()
 
 	RootCmd.Action = rootAction
-	RootCmd.Before = service.RootBefore
+	RootCmd.Before = rootBefore
 	RootCmd.After = rootAfter
 
 	// 初始化子命令行
-	gshClient.InitSubCmd(RootCmd)
+	subcmds.InitSubCmd(RootCmd)
 }
 
 func rootAction(context *cli.Context) error {
-	if err := service.PreCheckConfDebug(context); err != nil {
+	if err := PreCheckConfDebug(context); err != nil {
 		return err
 	}
 
-	protohost, err := service.PreCheckConfHost(context)
+	protohost, err := PreCheckConfHost(context)
 	if err != nil {
 		return err
 	}
 
-	tlsConfig, err := service.PreCheckConfTLS(context)
+	tlsConfig, err := PreCheckConfTLS(context)
 	if err != nil {
 		return err
 	}
 
 	// 初始化 dockergshclient
 	// 创建Docker Client实例。
-	gshClient.DockerGshCliInitial(context.App.Reader, context.App.Writer, context.App.ErrWriter, protohost[0], protohost[1], tlsConfig)
+	client.DockergshCliInitial(context.App.Reader, context.App.Writer, context.App.ErrWriter, protohost[0], protohost[1], tlsConfig)
 
+	return nil
+}
+
+func rootBefore(context *cli.Context) error {
+	// 命令运行前的初始化 logrus 的日志配置
+	logrus.SetFormatter(&logrus.JSONFormatter{})
+	logrus.SetOutput(context.App.Writer)
 	return nil
 }
 

@@ -4,15 +4,15 @@ import "os"
 
 // dockergsh dockergsh 相关默认值
 const (
-	DEFAULTHTTPHOST   = "127.0.0.1"
-	DEFAULTUNIXSOCKET = "/var/run/docker.sock"
+	DefaultHttpHost   = "127.0.0.1"
+	DefaultUnixSocket = "/var/run/docker.sock"
 )
 
 // dockergsh dockergsh 相关的环境变量名称
 const (
-	DOCKERGSH_DEBUG       = "DOCKERGSH_DEBUG"
-	DOCKERGSH_CONFIG_HOST = "DOCKERGSH_CONFIG_HOST"
-	DOCKERGSH_SERVER_HOST = "DOCKERGSH_SERVER_HOST"
+	DockergshDebug      = "DOCKERGSH_DEBUG"
+	DockergshConfigHost = "DOCKERGSH_CONFIG_HOST"
+	DockergshServerHost = "DOCKERGSH_SERVER_HOST"
 )
 
 var (
@@ -36,7 +36,7 @@ const (
 	BufferRequests = "DOCKERGSH_BufferRequests"
 )
 
-/* ==============daemongsh 相关====================*/
+/* ==============daemon 相关====================*/
 const (
 	NowarnKernelVersion = "DOCKERGSH_NOWARN_KERNEL_VERSION"
 	ConfigTempdir       = "DOCKERGSH_TMPDIR"

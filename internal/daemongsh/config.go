@@ -7,22 +7,22 @@ import (
 )
 
 type Config struct {
-	PidFile                     string              // daemongsh 所属进程的 PID 文件
+	PidFile                     string              // daemon 所属进程的 PID 文件
 	Root                        string              // dockergsh 运行时所使用的 root 路径
 	AutoRestart                 bool                // 是否支持创建的容器自动重启
-	Dns                         []string            // daemongsh 创建容器的默认 DNS server 地址
+	Dns                         []string            // daemon 创建容器的默认 DNS server 地址
 	DnsSearch                   []string            // dockergsh 使用指定的 DNS 查找地址
-	EnableIptables              bool                // 是否启用 daemongsh 的 iptables 功能
+	EnableIptables              bool                // 是否启用 daemon 的 iptables 功能
 	EnableIpForward             bool                // 是否启用 net.ipv4.ip_forward 功能
 	DefaultIp                   net.IP              //	绑定容器端口时，默认使用的 Ip
 	BridgeIface                 string              // 添加容器网络至已有的网桥的接口名
 	BridgeIp                    string              // 创建默认网桥的 Ip 地址
 	InterContainerCommunication bool                // 是否允许宿主机上的容器之间相互通信
-	GraphDriver                 string              // daemongsh 使用的存储驱动
-	GraphOptions                []string            // daemongsh 存储驱动配置选项
-	ExecDriver                  string              // daemongsh 运行时使用的 exec 驱动
+	GraphDriver                 string              // daemon 使用的存储驱动
+	GraphOptions                []string            // daemon 存储驱动配置选项
+	ExecDriver                  string              // daemon 运行时使用的 exec 驱动
 	Mtu                         int                 // 容器间通信网络的 mtu
-	DisableNetwork              bool                // 是否启用 daemongsh 的网络模式
+	DisableNetwork              bool                // 是否启用 daemon 的网络模式
 	EnableSelinuxSupport        bool                // 是否启用对 selinux 的支持
 	context                     map[string][]string // 上下文
 	// todo new in book
