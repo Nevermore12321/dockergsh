@@ -1,4 +1,4 @@
-package common
+package root
 
 import (
 	"crypto/tls"
@@ -14,7 +14,8 @@ import (
 )
 
 var (
-	VERSION string
+	VERSION   string
+	GITCOMMIT string
 )
 
 var (
@@ -85,10 +86,14 @@ func PreCheckConfDebug(context *cli.Context) error {
 func PreCheckConfHost(context *cli.Context) ([]string, error) {
 	// hosts的作用 dockergsh 要连接的目的地址，也就是 dockergsh daemon 的地址
 	hosts := context.StringSlice("hosts")
+	isDaemon := context.Command.Name == "daemon"
 	if len(hosts) == 0 { // 如果没有传入 hosts 地址
 		// 首先获取 DOCKERGSH_HOST 环境变量的值
 		defaultHost := os.Getenv(utils.DockergshConfigHost)
-		if defaultHost == "" {
+
+		// 若 defaultHost 为空或者 isDaemon 为真，说明目前还没有一个定义的 host对象，
+		// 则将其默认设置为 unix socket ，值为 utils.DefaultUnixSocket 即 "/var/run/docker.sock"
+		if defaultHost == "" || isDaemon {
 			defaultHost = fmt.Sprintf("unix://%s", utils.DefaultUnixSocket)
 		}
 

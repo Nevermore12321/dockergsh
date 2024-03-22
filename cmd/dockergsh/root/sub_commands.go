@@ -1,21 +1,26 @@
-package subcmds
+package root
 
 import (
-	"github.com/Nevermore12321/dockergsh/cmd/dockergsh/common"
+	"fmt"
 	clintActions "github.com/Nevermore12321/dockergsh/internal/client/actions"
 	daemonActions "github.com/Nevermore12321/dockergsh/internal/daemongsh/actions"
 	"github.com/urfave/cli/v2"
 )
 
-func InitSubCmd(root *cli.App) {
+func initSubCmd(root *cli.App) {
 	root.Commands = cli.Commands{
 		&cli.Command{
+			Name:   "version",
+			Usage:  GetHelpUsage("version"),
+			Action: CmdShowVersion,
+		},
+		&cli.Command{
 			Name:  "client",
-			Usage: common.GetHelpUsage("client"),
+			Usage: GetHelpUsage("client"),
 			Subcommands: cli.Commands{
 				{
 					Name:   "pull",
-					Usage:  common.GetHelpUsage("client"),
+					Usage:  GetHelpUsage("client"),
 					Action: clintActions.CmdPull,
 				},
 			},
@@ -23,12 +28,12 @@ func InitSubCmd(root *cli.App) {
 		},
 		&cli.Command{
 			Name:  "daemon",
-			Usage: common.GetHelpUsage("daemon"),
+			Usage: GetHelpUsage("daemon"),
 			Flags: cmdDaemonFlags(),
 			Subcommands: cli.Commands{
 				{
 					Name:   "start",
-					Usage:  common.GetHelpUsage("daemon_start"),
+					Usage:  GetHelpUsage("daemon_start"),
 					Action: daemonActions.CmdStart,
 				},
 			},
@@ -122,4 +127,8 @@ func cmdDaemonFlags() []cli.Flag {
 			Usage:   "Enable selinux support. SELinux does not presently support the BTRFS storage driver",
 		},
 	}
+}
+
+func CmdShowVersion(context *cli.Context) error {
+	fmt.Printf("Docker version %s, build %s\n", VERSION, GITCOMMIT)
 }

@@ -1,7 +1,6 @@
-package common
+package root
 
 import (
-	"github.com/Nevermore12321/dockergsh/cmd/dockergsh/subcmds"
 	"github.com/Nevermore12321/dockergsh/internal/client"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
@@ -12,12 +11,13 @@ var (
 	RootCmd = cli.NewApp()
 )
 
-func RootCmdInitial(name string, in io.Reader, out, err io.Writer) {
+func Initial(name string, in io.Reader, out, err io.Writer) {
 	RootCmd.Name = name
 	if in != nil {
 		RootCmd.Reader = in
 	}
 	if out != nil {
+
 		RootCmd.Writer = out
 	}
 	if err != nil {
@@ -38,7 +38,7 @@ func RootCmdInitial(name string, in io.Reader, out, err io.Writer) {
 	RootCmd.After = rootAfter
 
 	// 初始化子命令行
-	subcmds.InitSubCmd(RootCmd)
+	initSubCmd(RootCmd)
 }
 
 func rootAction(context *cli.Context) error {
@@ -46,6 +46,12 @@ func rootAction(context *cli.Context) error {
 		return err
 	}
 
+	// docker daemon
+	if context.Command.Name == "daemon" {
+		return nil
+	}
+
+	// docker client
 	protohost, err := PreCheckConfHost(context)
 	if err != nil {
 		return err
