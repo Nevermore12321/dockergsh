@@ -9,6 +9,8 @@ import (
 	"github.com/Nevermore12321/dockergsh/pkg/signal"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
+	"os"
+	"strings"
 )
 
 var (
@@ -23,8 +25,11 @@ func CmdStart(context *cli.Context) error {
 	if context.NArg() != 1 {
 		return ErrCmdFormat
 	}
-	// todo parse hosts
-	mainDaemon(context, nil)
+	// 从环境变量中获取 hosts 信息
+	hostsEnv := os.Getenv(utils.DockergshDaemonHosts)
+	hosts := strings.Split(hostsEnv, ",")
+
+	mainDaemon(context, hosts)
 	return nil
 }
 
@@ -62,7 +67,7 @@ func mainDaemon(context *cli.Context, hosts []string) {
 			log.Fatal(err)
 		}
 
-		// 6.3 创建名为acceptconnections的Job，并且开始运行
+		// 6.3 创建名为 acceptconnections 的Job，并且开始运行
 		if err := eng.Job("acceptconnections").Run(); err != nil {
 			log.Fatal(err)
 		}

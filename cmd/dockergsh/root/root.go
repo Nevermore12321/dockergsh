@@ -1,7 +1,6 @@
 package root
 
 import (
-	"github.com/Nevermore12321/dockergsh/internal/client"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 	"io"
@@ -24,6 +23,9 @@ func Initial(name string, in io.Reader, out, err io.Writer) {
 		RootCmd.ErrWriter = err
 	}
 
+	// 自动补全
+	RootCmd.EnableBashCompletion = true
+
 	// help 信息
 	RootCmd.Usage = GetHelpUsage("")
 
@@ -42,31 +44,19 @@ func Initial(name string, in io.Reader, out, err io.Writer) {
 }
 
 func rootAction(context *cli.Context) error {
+	// todo reexec
+
+	// 是否开启 debug
 	if err := PreCheckConfDebug(context); err != nil {
 		return err
 	}
 
-	// docker daemon
-	if context.Command.Name == "daemon" {
-		return nil
-	}
-
-	// docker client
-	protohost, err := PreCheckConfHost(context)
-	if err != nil {
+	// 检查 host 是否合法
+	if err := PreCheckConfHost(context); err != nil {
 		return err
 	}
-
-	tlsConfig, err := PreCheckConfTLS(context)
-	if err != nil {
-		return err
-	}
-
-	// 初始化 dockergshclient
-	// 创建Docker Client实例。
-	client.DockergshCliInitial(context.App.Reader, context.App.Writer, context.App.ErrWriter, protohost[0], protohost[1], tlsConfig)
-
 	return nil
+
 }
 
 func rootBefore(context *cli.Context) error {

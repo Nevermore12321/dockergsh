@@ -15,8 +15,9 @@ func initSubCmd(root *cli.App) {
 			Action: CmdShowVersion,
 		},
 		&cli.Command{
-			Name:  "client",
-			Usage: GetHelpUsage("client"),
+			Name:   "client",
+			Usage:  GetHelpUsage("client"),
+			Action: clintActions.CmdClientInitial,
 			Subcommands: cli.Commands{
 				{
 					Name:   "pull",
@@ -24,7 +25,6 @@ func initSubCmd(root *cli.App) {
 					Action: clintActions.CmdPull,
 				},
 			},
-			Action: clintActions.CmdPull,
 		},
 		&cli.Command{
 			Name:  "daemon",
@@ -43,6 +43,10 @@ func initSubCmd(root *cli.App) {
 
 func cmdDaemonFlags() []cli.Flag {
 	return []cli.Flag{
+		&cli.StringSliceFlag{
+			Name:  "hosts",
+			Usage: "The socket(s) to bind to in daemon mode\nspecified using one or more tcp://host:port, unix:///path/to/socket, fd://* or fd://socketfd.",
+		},
 		&cli.StringFlag{
 			Name:    "pidfile",
 			Aliases: []string{"p"},
@@ -131,4 +135,5 @@ func cmdDaemonFlags() []cli.Flag {
 
 func CmdShowVersion(context *cli.Context) error {
 	fmt.Printf("Docker version %s, build %s\n", VERSION, GITCOMMIT)
+	return nil
 }

@@ -1,12 +1,11 @@
 package root
 
 import (
-	"crypto/tls"
-	"crypto/x509"
 	"errors"
 	"fmt"
 	"github.com/Nevermore12321/dockergsh/internal/utils"
 	"github.com/Nevermore12321/dockergsh/pkg/parse"
+	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 	"os"
 	"path/filepath"
@@ -19,7 +18,8 @@ var (
 )
 
 var (
-	ErrMultiHosts = errors.New("please specify only one -H")
+	ErrMultiHosts     = errors.New("please specify only one -H")
+	ErrNoCorrectHosts = errors.New("please specify correct hosts")
 )
 
 func cmdCommonFlags() []cli.Flag {
@@ -68,7 +68,7 @@ func cmdCommonFlags() []cli.Flag {
 		},
 		&cli.StringSliceFlag{
 			Name:  "hosts",
-			Usage: "The socket(s) to bind to in daemon mode\nspecified using one or more tcp://host:port, unix:///path/to/socket, fd://* or fd://socketfd.",
+			Usage: "The socket(s) to bind to in daemon mode\nspecified using one or more tcp://host:port, unix:///path/to/socket, fd://* or fd://socketfd.\n Or, the address to connection to daemon(only one addr).",
 		},
 	}
 }
@@ -83,10 +83,12 @@ func PreCheckConfDebug(context *cli.Context) error {
 	return nil
 }
 
-func PreCheckConfHost(context *cli.Context) ([]string, error) {
+func PreCheckConfHost(context *cli.Context) error {
 	// hosts的作用 dockergsh 要连接的目的地址，也就是 dockergsh daemon 的地址
 	hosts := context.StringSlice("hosts")
 	isDaemon := context.Command.Name == "daemon"
+	isClient := context.Command.Name == "client"
+
 	if len(hosts) == 0 { // 如果没有传入 hosts 地址
 		// 首先获取 DOCKERGSH_HOST 环境变量的值
 		defaultHost := os.Getenv(utils.DockergshConfigHost)
@@ -97,62 +99,38 @@ func PreCheckConfHost(context *cli.Context) ([]string, error) {
 			defaultHost = fmt.Sprintf("unix://%s", utils.DefaultUnixSocket)
 		}
 
+		// 验证该 defaultHost 的合法性之后，将 defaultHost 的值追加至 hosts 的末尾， 继续往下执行。
 		hosts = append(hosts, defaultHost)
 	}
 
-	if len(hosts) > 1 {
-		return nil, ErrMultiHosts
-	}
-
 	// 验证该 hosts 的合法性
-	host, err := ValidateHost(hosts[0])
-
-	if err != nil {
-		return nil, err
+	parsedHosts := ValidateHosts(hosts)
+	if parsedHosts == nil {
+		return ErrNoCorrectHosts
 	}
 
-	if err := os.Setenv(utils.DockergshServerHost, host); err != nil {
-		return nil, err
+	if len(parsedHosts) > 1 && isClient { // dockergsh client 只能有一个 host
+		return ErrMultiHosts
+	} else if isClient { // 传递给后续 dockergsh client 子命令
+		err := os.Setenv(utils.DockergshClientHost, parsedHosts[0])
+		return err
 	}
 
-	protohost := strings.SplitN(host, "://", 2)
-	return protohost, nil
+	// 传递给后续 dockergsh daemon 子命令
+	return os.Setenv(utils.DockergshDaemonHosts, strings.Join(parsedHosts, ","))
 }
 
-func PreCheckConfTLS(context *cli.Context) (*tls.Config, error) {
-	var tlsConfig tls.Config
-	tlsConfig.InsecureSkipVerify = true
-	// tlsConfig 对象需要加载一个受信的 ca 文件
-	// 如果flTlsVerify为true，Docker Client连接Docker Server需要验证安全性
-	if context.Bool("tls-verify") {
-		// 读取 ca 证书
-		filePath := context.String("tls-cacert")
-		file, err := os.ReadFile(filePath)
-		if err != nil {
-			return nil, fmt.Errorf("Couldn't read ca cert %s: %s", filePath, err)
+func ValidateHosts(hosts []string) []string {
+	var parsedHosts []string
+	for _, host := range hosts {
+		parsedHost, err := ValidateHost(host)
+		if err == nil {
+			log.Warningf("%s is not a correct format", host)
+			continue
 		}
-
-		// 证书池是用于存储根证书和中间证书的集合，用于在验证证书链时提供验证所需的信任锚点。
-		certPool := x509.NewCertPool()
-
-		// 向证书池添加根证书
-		certPool.AppendCertsFromPEM(file)
-
-		tlsConfig.RootCAs = certPool
-		tlsConfig.InsecureSkipVerify = false
-
-		// 如果flTlsVerify有一个为真，那么需要加载证书发送给客户端。
-		_, errCert := os.Stat(context.String("tls-cert"))
-		_, errKey := os.Stat(context.String("tls-key"))
-		if errCert == nil && errKey == nil {
-			cert, err := tls.LoadX509KeyPair(context.String("tls-cert"), context.String("tls-key"))
-			if err != nil {
-				return nil, fmt.Errorf("Couldn't load X509 key pair: %s. Key encrypted?", err)
-			}
-			tlsConfig.Certificates = []tls.Certificate{cert}
-		}
+		parsedHosts = append(parsedHosts, parsedHost)
 	}
-	return &tlsConfig, nil
+	return parsedHosts
 }
 
 func ValidateHost(host string) (string, error) {

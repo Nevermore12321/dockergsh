@@ -10,9 +10,10 @@ const (
 
 // dockergsh dockergsh 相关的环境变量名称
 const (
-	DockergshDebug      = "DOCKERGSH_DEBUG"
-	DockergshConfigHost = "DOCKERGSH_CONFIG_HOST"
-	DockergshServerHost = "DOCKERGSH_SERVER_HOST"
+	DockergshDebug       = "DOCKERGSH_DEBUG"
+	DockergshConfigHost  = "DOCKERGSH_CONFIG_HOST"
+	DockergshDaemonHosts = "DOCKERGSH_DAEMON_HOSTS"
+	DockergshClientHost  = "DOCKERGSH_CLIENT_HOST"
 )
 
 var (
