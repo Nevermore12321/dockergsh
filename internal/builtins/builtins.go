@@ -1,8 +1,9 @@
 package builtins
 
 /*
-builtins 是 Docker Daemon运行过程中，注册的一些任务（Job）
+builtins 是 Docker Daemon运行过程中，注册的一些任务（Jobs）
 	这部分任务一般与容器的运行无关，与Docker Daemon的运行时信息有关
+注册的任务不会立即执行，当Docker Daemon接收到Job的执行请求时，才被Docker Daemon调用执行
 */
 
 import (
@@ -38,7 +39,7 @@ func Register(eng *engine.Engine) error {
 	return registry.NewService().Install(eng)
 }
 
-// 网络初始化 job
+// 网络初始化 job，todo 网络栈初始化
 // 1. 获取为Docker服务的网络设备地址。
 // 2. 创建指定IP地址的网桥。
 // 3. 配置网络iptables规则。
@@ -48,7 +49,7 @@ func daemon(eng *engine.Engine) error {
 }
 
 // API 初始化 job
-// 1. ServeApi执行时，通过循环多种指定协议，创建出goroutine协调来配置指定的http.Server，最终为不同协议的请求服务
+// 1. ServeApi执行时，通过循环多种指定协议，创建出goroutine来配置指定的http.Server，最终为不同协议的请求服务（也就是 server 接收请求）
 // 2. AcceptConnections的作用主要是：通知宿主机上init守护进程Docker Daemon已经启动完毕，可以让Docker Daemon开始服务API请求
 func remote(eng *engine.Engine) error {
 	if err := eng.Register("serveapi", apiserver.ServeApi); err != nil {
@@ -58,9 +59,10 @@ func remote(eng *engine.Engine) error {
 	return eng.Register("acceptconnections", apiserver.AcceptConnections)
 }
 
+// 名为 `version` Job 的处理函数 handler
 // dockergshVersion 会向名为version的Job的标准输出中写入:
 // Docker的版本、Docker API的版本、git版本、Go语言运行时版本，以及操作系统版本等信息
-func dockergshVersion() error {
+func dockergshVersion(job *engine.Job) engine.Status {
 	// todo
-	return nil
+	return 0
 }

@@ -80,7 +80,7 @@ func (job *Job) Run() error {
 		return fmt.Errorf("engine is shutdown")
 	}
 
-	//ServeApi 是后台运行的守护进程，因此 Job 会阻塞运行
+	// ServeApi 是后台运行的守护进程，因此 Job 会阻塞运行
 	if job.Name != "serveapi" {
 		// 修改 engine 对象的内容，都需要线程安全，加锁
 		job.Eng.lck.Lock()
@@ -101,7 +101,7 @@ func (job *Job) Run() error {
 		job.Eng.Logf("-job %s%s", job.CallString(), job.StatusString())
 	}()
 
-	// 错误信息
+	// 错误信息 todo
 	var errMessage = bytes.NewBuffer(nil)
 	job.Stderr.Add(errMessage)
 

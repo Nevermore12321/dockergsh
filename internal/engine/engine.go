@@ -47,7 +47,7 @@ type Engine struct {
 func (eng *Engine) Register(name string, handler Handler) error {
 	_, exists := eng.handlers[name]
 	if exists {
-		return fmt.Errorf("Can't register a existed job %s", name)
+		return fmt.Errorf("can't register a existed job %s", name)
 	}
 	eng.handlers[name] = handler
 	return nil
@@ -133,6 +133,7 @@ func (eng *Engine) IsShutdown() bool {
 }
 
 // Job 创建并初始化 Job 作业对象
+// 注册流程是，先在 engine 中注册 handler ，创建 job，job 的名称与 engine 中 handler 的名称相同
 func (eng *Engine) Job(name string, args ...string) *Job {
 	job := &Job{
 		Eng:    eng,
@@ -154,7 +155,7 @@ func (eng *Engine) Job(name string, args ...string) *Job {
 		// 添加 handler 到 job 对象中
 		job.handler = hanler
 	} else if eng.catchall != nil && name != "" { // 名称不能为空，
-		// 如果不存在该 job 的 handler
+		// 如果不存在该 job 的 handler，
 		job.handler = eng.catchall
 	}
 	return job

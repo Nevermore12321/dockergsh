@@ -48,19 +48,20 @@ func mainDaemon(context *cli.Context, hosts []string) {
 	// 3. 创建engine对象。
 	eng := engine.New()
 
-	//4. 设置engine的信号捕获及处理方法。
+	// 4. 设置engine的信号捕获及处理方法。
 	//		因为 Daemon 是 linux 上一个后台进程，应该具有处理信号的能力
 	signal.Trap(eng.Shutdown)
 
-	//5）加载builtins。给 engine 注册不同的任务job
+	// 5. 加载builtins。给 engine 注册不同的任务job
 	if err := builtins.Register(eng); err != nil {
 		log.Fatal(err)
 	}
 
-	//6）使用goroutine加载daemon对象并运行。
+	// 6. 使用goroutine加载daemon对象并运行。
+	//		在后台加载守护进程，即启动 http api，以便在守护进程启动时连接不会失败
 	go func() {
 		// 6.1 创建daemon对象
-		// 初始化基本环境，如处理config参数，验证系统支持度，配置Docker工作目录，设置与加载多种驱动，创建graph环境，验证DNS配置等
+		// 	初始化基本环境，如处理config参数，验证系统支持度，配置Docker工作目录，设置与加载多种驱动，创建graph环境，验证DNS配置等
 		daemon, err := daemongsh.NewDaemongsh(daemonCfg, eng)
 		if err != nil {
 			log.Fatal(err)
@@ -72,6 +73,8 @@ func mainDaemon(context *cli.Context, hosts []string) {
 		}
 
 		// 6.3 创建名为 acceptconnections 的Job，并且开始运行
+		// 		守护进程完成设置后，可以告诉 serveapi 开始接受连接
+		// 		builtins 注册时，已经将 acceptconnections 注册到 engine 的 handler中，这里创建 Job 的 handler 就是对应在 engine 中的 handler
 		if err := eng.Job("acceptconnections").Run(); err != nil {
 			log.Fatal(err)
 		}

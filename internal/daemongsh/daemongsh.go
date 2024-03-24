@@ -17,11 +17,11 @@ import (
 同时也统一化管理着 Docker 架构中 graph、graphdriver、execdriver、volumes、Docker 容器等众多资源。
 可以说，Dockergsh Daemongsh复杂的运作均由daemongsh对象来调度
 */
-
+// todo add elements
 type Daemongsh struct {
 }
 
-// NewDaemongsh 创建 Daemonize 对象实例
+// NewDaemongsh 创建 Daemongsh 对象实例
 func NewDaemongsh(config *Config, eng *engine.Engine) (*Daemongsh, error) {
 	daemongsh, err := NewDaemongshFromDirectory(config, eng)
 	if err != nil {
