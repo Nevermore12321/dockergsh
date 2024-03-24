@@ -1,12 +1,17 @@
 package builtins
 
+/*
+builtins 是 Docker Daemon运行过程中，注册的一些任务（Job）
+	这部分任务一般与容器的运行无关，与Docker Daemon的运行时信息有关
+*/
+
 import (
 	"github.com/Nevermore12321/dockergsh/internal/engine"
 	"github.com/Nevermore12321/dockergsh/internal/events"
 	"github.com/Nevermore12321/dockergsh/internal/registry"
 )
 
-// 加载 builtins，向 engine 注册多个 Handler，以便后续在执行相应任务时，运行指定的 Handler
+// Register 加载 builtins，向 engine 注册多个 Handler，以便后续在执行相应任务时，运行指定的 Handler
 // 这些Handler包括：Docker Daemon宿主机的网络初始化、Web API服务、事件查询、版本查看、Docker Registry的验证与搜索等
 func Register(eng *engine.Engine) error {
 	// 1. 注册网络初始化处理方法

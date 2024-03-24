@@ -43,10 +43,6 @@ func initSubCmd(root *cli.App) {
 
 func cmdDaemonFlags() []cli.Flag {
 	return []cli.Flag{
-		&cli.StringSliceFlag{
-			Name:  "hosts",
-			Usage: "The socket(s) to bind to in daemon mode\nspecified using one or more tcp://host:port, unix:///path/to/socket, fd://* or fd://socketfd.",
-		},
 		&cli.StringFlag{
 			Name:    "pidfile",
 			Aliases: []string{"p"},
@@ -84,9 +80,9 @@ func cmdDaemonFlags() []cli.Flag {
 			Value: true,
 			Usage: "Enable net.ipv4.ip_forward",
 		},
-		&cli.StringSliceFlag{
+		&cli.StringFlag{
 			Name:  "ip",
-			Usage: "Default IP address to use when binding container ports",
+			Usage: "Default IP address to use when binding container port",
 		},
 		&cli.StringFlag{
 			Name:    "bridge-ip",

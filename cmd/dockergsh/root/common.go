@@ -4,8 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/Nevermore12321/dockergsh/internal/utils"
-	"github.com/Nevermore12321/dockergsh/pkg/parse"
-	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 	"os"
 	"path/filepath"
@@ -67,7 +65,7 @@ func cmdCommonFlags() []cli.Flag {
 			Value: filepath.Join(utils.DockergshCertPath, utils.DefaultKeyFile),
 		},
 		&cli.StringSliceFlag{
-			Name:  "hosts",
+			Name:  "host",
 			Usage: "The socket(s) to bind to in daemon mode\nspecified using one or more tcp://host:port, unix:///path/to/socket, fd://* or fd://socketfd.\n Or, the address to connection to daemon(only one addr).",
 		},
 	}
@@ -104,41 +102,18 @@ func PreCheckConfHost(context *cli.Context) error {
 	}
 
 	// 验证该 hosts 的合法性
-	parsedHosts := ValidateHosts(hosts)
+	parsedHosts := utils.Validates(hosts, utils.ValidateHost)
 	if parsedHosts == nil {
 		return ErrNoCorrectHosts
 	}
 
 	if len(parsedHosts) > 1 && isClient { // dockergsh client 只能有一个 host
 		return ErrMultiHosts
-	} else if isClient { // 传递给后续 dockergsh client 子命令
-		err := os.Setenv(utils.DockergshClientHost, parsedHosts[0])
-		return err
 	}
 
-	// 传递给后续 dockergsh daemon 子命令
-	return os.Setenv(utils.DockergshDaemonHosts, strings.Join(parsedHosts, ","))
-}
+	// 传递给后续 dockergsh 子命令
+	return context.Set(utils.DockergshHosts, strings.Join(parsedHosts, ","))
 
-func ValidateHosts(hosts []string) []string {
-	var parsedHosts []string
-	for _, host := range hosts {
-		parsedHost, err := ValidateHost(host)
-		if err == nil {
-			log.Warningf("%s is not a correct format", host)
-			continue
-		}
-		parsedHosts = append(parsedHosts, parsedHost)
-	}
-	return parsedHosts
-}
-
-func ValidateHost(host string) (string, error) {
-	parsedHost, err := parse.ParseHost(host, utils.DefaultHttpHost, utils.DefaultUnixSocket)
-	if err != nil {
-		return host, err
-	}
-	return parsedHost, nil
 }
 
 func GetHelpUsage(method string) string {

@@ -4,18 +4,9 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
-	"github.com/Nevermore12321/dockergsh/pkg/parse"
 	"github.com/urfave/cli/v2"
 	"os"
 )
-
-func ValidateHost(host string) (string, error) {
-	parsedHost, err := parse.ParseHost(host, DEFAULTHTTPHOST, DEFAULTUNIXSOCKET)
-	if err != nil {
-		return host, err
-	}
-	return parsedHost, nil
-}
 
 func PreCheckConfTLS(context *cli.Context) (*tls.Config, error) {
 	var tlsConfig tls.Config

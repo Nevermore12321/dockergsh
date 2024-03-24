@@ -2,10 +2,12 @@ package daemongsh
 
 import (
 	"github.com/Nevermore12321/dockergsh/internal/daemongsh/networkdriver"
+	"github.com/Nevermore12321/dockergsh/internal/utils"
 	"github.com/urfave/cli/v2"
 	"net"
 )
 
+// Config 在启动 dockergsh 守护进程时传递给它的配置设置，例如：`docker -d -e lxc`
 type Config struct {
 	PidFile                     string              // daemon 所属进程的 PID 文件
 	Root                        string              // dockergsh 运行时所使用的 root 路径
@@ -31,24 +33,25 @@ type Config struct {
 	FixedCIDR    string   // 指定默认网桥的子网地址
 }
 
-// todo init
+// InitialFlags todo init
+// InitialFlags 将命令行选项添加到当前进程的顶级标志解析器。
 func (config *Config) InitialFlags(context *cli.Context) {
 	config.PidFile = context.String("pidfile")
 	config.Root = context.String("graph")
-	config.AutoRestart = context.Bool("pidfile")
-	config.Dns = context.StringSlice("pidfile")
-	config.DnsSearch = context.StringSlice("pidfile")
-	config.EnableIptables = context.Bool("pidfile")
-	config.EnableIpForward = context.Bool("pidfile")
-	//config.DefaultIp = context.StringSlice("pidfile")
-	config.PidFile = context.String("pidfile")
-	config.PidFile = context.String("pidfile")
-	config.PidFile = context.String("pidfile")
-	config.PidFile = context.String("pidfile")
-	config.PidFile = context.String("pidfile")
-	config.PidFile = context.String("pidfile")
-	config.PidFile = context.String("pidfile")
-	config.PidFile = context.String("pidfile")
+	config.AutoRestart = context.Bool("restart")
+	config.Dns = utils.Validates(context.StringSlice("dns"), utils.ValidateIPAddress)
+	config.DnsSearch = utils.Validates(context.StringSlice("dns-search"), utils.ValidateDnsSearch)
+	config.EnableIptables = context.Bool("iptables")
+	config.EnableIpForward = context.Bool("ip-forward")
+	config.DefaultIp = net.ParseIP(context.String("ip"))
+	config.BridgeIp = context.String("bridge-ip")
+	config.BridgeIface = context.String("bridge")
+	config.InterContainerCommunication = context.Bool("inter-container-communication")
+	config.GraphDriver = context.String("storage-driver")
+	config.GraphOptions = context.StringSlice("storage-opts")
+	config.ExecDriver = context.String("exec-driver")
+	config.EnableSelinuxSupport = context.Bool("selinux-enabled")
+	config.Mtu = context.Int("mtu")
 }
 
 // GetDefaultNetworkMtu 获取 default 路由的默认 mtu 配置

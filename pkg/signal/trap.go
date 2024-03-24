@@ -10,6 +10,10 @@ import (
 )
 
 // Trap 信号捕捉并处理函数
+// Trap 设置了一个简化的信号“陷阱”，适用于普通 unix 命令行工具预期的常见行为。
+//   - 如果收到 SIGINT 或 SIGTERM，则调用“cleanup”，然后终止进程。
+//   - 如果在清理完成之前 SIGINT 或 SIGTERM 重复 3 次，则跳过清理并直接终止进程。
+//   - 如果在环境中设置了“DEBUG”，SIGQUIT 会导致退出而不进行清理。
 func Trap(cleanup func()) {
 	// 1. 创建并设置一个channel，用于发送信号通知
 	// channel 的大小为 1
@@ -22,30 +26,32 @@ func Trap(cleanup func()) {
 		signals = append(signals, syscall.SIGQUIT)
 	}
 
-	// 3. 通过标准库 signal.Notify(c，signals...) 中 Notify 函数来实现将接收到的signal信号传递给c
+	// 3. 通过标准库 signal.Notify(c，signals...) 中 Notify 函数来实现将接收到的signals信号传递给c
 	osSignal.Notify(c, signals...)
 
 	// 4. 创建一个goroutine来处理具体的signal信号
 	go func() {
 		// 尝试次数
 		interruptCount := uint32(0)
-		// 遍历获取 channal c 中的信号，获取到信号后，创建新的 goroutine 处理
+		// 遍历获取 channel c 中的信号，获取到信号后，创建新的 goroutine 处理
+		// for range形式可用于从通道接收值，直到它关闭为止
 		for sig := range c {
 			go func(sig os.Signal) {
 				log.Printf("Received signal '%v', starting shutdown of docker...", sig)
 				// 判断捕获的信号类型
 				switch sig {
 				case os.Interrupt, syscall.SIGTERM: // 当信号类型为os.Interrupt或者syscall.SIGTERM时
-					// 用户连续发送的 中断信号 少于 3 次，优雅关闭
+					// 用户连续发送的中断信号 少于 3 次，优雅关闭
+					// 注意这里必须使用 atomic 原子操作来避免并发错误
 					if atomic.LoadUint32(&interruptCount) < 3 {
 						atomic.AddUint32(&interruptCount, 1)
 						// 如果是第一次收到 中断信号, 执行参数的 cleanup 函数
 						if atomic.LoadUint32(&interruptCount) == 1 {
 							// 善后工作有：
-							// Daemon不再接受任何新的Job
-							// Daemon等待所有存活的Job执行完毕
-							// Daemon调用所有shutdown的处理方法
-							// 在15秒时间内，若所有的handler执行完毕，则Shutdown（）函数返回，否则强制返回。
+							// 	- Daemon不再接受任何新的Job
+							// 	- Daemon等待所有存活的Job执行完毕
+							// 	- Daemon调用所有shutdown的处理方法
+							// 	- 在15秒时间内，若所有的handler执行完毕，则Shutdown（）函数返回，否则强制返回。
 							cleanup()
 							os.Exit(0)
 						} else { // 否则，什么也不做

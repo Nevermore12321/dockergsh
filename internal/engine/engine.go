@@ -9,9 +9,10 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"time"
 )
 
-// Handler job 的具体业务逻辑处理
+// Handler job 的具体业务逻辑处理的函数声明
 type Handler func(*Job) Status
 
 // 全局注册的所有 job
@@ -22,8 +23,9 @@ func init() {
 }
 
 /*
-Engine扮演着Docker Container存储仓库的角色
+Engine 扮演着Docker Container存储仓库的角色
 并且通过Job的形式管理Docker运行中涉及的所有任务。
+即，docker server 收到命令，通过在 engine 中创建 job 执行具体的人物
 */
 type Engine struct {
 	handlers   map[string]Handler // 表示每一个 job 对应的具体逻辑处理 handler
@@ -33,10 +35,11 @@ type Engine struct {
 	Stderr     io.Writer          // 标准错误
 	Stdin      io.Reader          // 标准输入
 	Logging    bool               // 是否打开日志
-	tasks      sync.WaitGroup     // 所有运行的 goroutine 数量
+	tasks      sync.WaitGroup     // 所有运行 tasks 的 goroutine 数量
 	lck        sync.RWMutex       // 读写互斥锁，用于 shutdown
-	shutdown   bool               // 是否需要关闭逻辑处理
+	shutdown   bool               // 是否已经执行了关闭
 	onShutdown []func()           // 如果需要关闭的逻辑处理，在这里定义 handler
+	// todo hack
 }
 
 // Register engine 注册一个 Job，其实就是在 engine 的 handlers 中加一个 job
@@ -67,6 +70,48 @@ func (eng *Engine) commands() []string {
 // 在15秒时间内，若所有的handler执行完毕，则Shutdown（）函数返回，否则强制返回。
 // 以先发生者为准。
 func (eng *Engine) Shutdown() {
+	eng.lck.Lock()    // 加锁
+	if eng.shutdown { // 如果已经执行了关闭逻辑处理
+		eng.lck.Unlock()
+		return
+	}
+	eng.shutdown = true // 这里要加锁的原因是，有可能一个 goroutine 已经在关闭了，另一个关闭又开始了
+	// 不需要用锁来保护其余部分，以允许其他调用立即失败并“关闭”，而不是挂起 15 秒。
+	// 这需要所有并发调用检查是否关闭，否则可能会导致竞争
+	eng.lck.Unlock() // 解锁
+
+	// 开始关闭处理
+	// 1. 等待所有任务 tasks 关闭，等待 5s
+	tasksDone := make(chan struct{})
+	go func() {
+		eng.tasks.Wait() // 等待所有 tasks 结束，即 waitGroup 没有 goroutine 运行
+		close(tasksDone) // 关闭 tasksDone channel，表示已经全部关闭
+	}()
+	select {
+	case <-time.After(time.Second * 5):
+	case <-tasksDone:
+	}
+
+	// 2. 调用 shutdown handler
+	var wg sync.WaitGroup
+	for _, handler := range eng.onShutdown {
+		wg.Add(1)
+		go func(f func()) {
+			defer wg.Done()
+			f()
+		}(handler)
+	}
+
+	// 3. 等待 10s
+	Done := make(chan struct{})
+	go func() {
+		wg.Wait()   // 等待所有 shutdown handler 结束
+		close(Done) // 关闭 Done channel，表示已经全部关闭
+	}()
+	select {
+	case <-time.After(time.Second * 10):
+	case <-tasksDone:
+	}
 	return
 }
 

@@ -2,6 +2,8 @@ package actions
 
 import (
 	"errors"
+	"flag"
+	"fmt"
 	"github.com/Nevermore12321/dockergsh/internal/builtins"
 	"github.com/Nevermore12321/dockergsh/internal/daemongsh"
 	"github.com/Nevermore12321/dockergsh/internal/engine"
@@ -22,11 +24,11 @@ var (
 )
 
 func CmdStart(context *cli.Context) error {
-	if context.NArg() != 1 {
+	if context.NArg() != 0 {
 		return ErrCmdFormat
 	}
 	// 从环境变量中获取 hosts 信息
-	hostsEnv := os.Getenv(utils.DockergshDaemonHosts)
+	hostsEnv := context.String(utils.DockergshHosts)
 	hosts := strings.Split(hostsEnv, ",")
 
 	mainDaemon(context, hosts)
@@ -40,12 +42,14 @@ func mainDaemon(context *cli.Context, hosts []string) {
 
 	//2. 命令行flag参数个数检查。
 	if context.NArg() != 0 {
+		daemonUsage()
 		return
 	}
-	//3. 创建engine对象。
+	// 3. 创建engine对象。
 	eng := engine.New()
 
-	//4）设置engine的信号捕获及处理方法。
+	//4. 设置engine的信号捕获及处理方法。
+	//		因为 Daemon 是 linux 上一个后台进程，应该具有处理信号的能力
 	signal.Trap(eng.Shutdown)
 
 	//5）加载builtins。给 engine 注册不同的任务job
@@ -101,4 +105,10 @@ func mainDaemon(context *cli.Context, hosts []string) {
 	if err := job.Run(); err != nil {
 		log.Fatal(err)
 	}
+}
+
+func daemonUsage() {
+	fmt.Fprintf(os.Stderr, "Usage: docker daemon start <flags>\n")
+	flag.PrintDefaults()
+	os.Exit(1)
 }
