@@ -7,6 +7,12 @@ import (
 	"net"
 )
 
+// network 默认配置
+var (
+	DefaultNetworkMtu    = 1500 // mtu 默认值
+	DisableNetworkBridge = "none"
+)
+
 // Config 在启动 dockergsh 守护进程时传递给它的配置设置，例如：`docker -d -e lxc`
 type Config struct {
 	PidFile                     string              // daemon 所属进程的 PID 文件
@@ -59,7 +65,7 @@ func GetDefaultNetworkMtu() int {
 	// 获取到 default 路由网卡信息，即 ip route 的第一条 default 信息
 	iface, err := networkdriver.GetDefaultRouteIface()
 	if err != nil {
-		return networkdriver.DefaultNetworkMtu
+		return DefaultNetworkMtu
 	}
 	return iface.MTU
 }

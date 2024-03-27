@@ -3,7 +3,6 @@ package daemongsh
 import (
 	"fmt"
 	"github.com/Nevermore12321/dockergsh/internal/daemongsh/graphdriver"
-	"github.com/Nevermore12321/dockergsh/internal/daemongsh/networkdriver"
 	"github.com/Nevermore12321/dockergsh/internal/engine"
 	"github.com/Nevermore12321/dockergsh/internal/utils"
 	"github.com/Nevermore12321/dockergsh/pkg/parse/kernel"
@@ -71,7 +70,7 @@ func NewDaemongshFromDirectory(config *Config, eng *engine.Engine) (*Daemongsh, 
 		后续创建并执行创建Docker Daemon网络环境时会使用此属性，即在名为init_networkdriver的Job创建并运行中体现
 
 	*/
-	config.DisableNetwork = networkdriver.DisableNetworkBridge == config.BridgeIface
+	config.DisableNetwork = DisableNetworkBridge == config.BridgeIface
 
 	// 1.5 处理 PID 文件配置
 	if config.PidFile != "" {
