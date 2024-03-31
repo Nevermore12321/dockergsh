@@ -1,6 +1,14 @@
 package netlink
 
-import "net"
+import (
+	"errors"
+	"net"
+)
+
+var (
+	ErrShortResponse = errors.New("got short response from netlink") // netlink 返回结果长度小于 NLMSG 头长度，即错误
+	ErrWrongSockType = errors.New("wrong socket type")               // socket 中的 pid 解析类型错误
+)
 
 /*
 Route 路由信息，表示一条路由信息

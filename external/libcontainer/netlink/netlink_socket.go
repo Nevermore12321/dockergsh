@@ -3,11 +3,12 @@ package netlink
 import "syscall"
 
 type NetlinkSocket struct {
-	fd int
-	sa syscall.SockaddrNetlink
+	fd int                     // 发送套接字
+	sa syscall.SockaddrNetlink // 目标地址
 }
 
 // getNetlinkSocket 创建 NetlinkSocket 实例对象
+// 目标socket 是 NetlinkSocket.sa 中定义，应用程序自行初始化 sa
 func getNetlinkSocket() (*NetlinkSocket, error) {
 	// 1. 创建 socket，使用 int socket(int domain, int type, int protocol); 系统调用
 	//	domain：表示套接字的协议域（或地址族），指定了套接字通信所使用的协议类型。常见的协议族包括：
@@ -26,7 +27,7 @@ func getNetlinkSocket() (*NetlinkSocket, error) {
 	//		例如，对于 AF_INET 和 SOCK_STREAM 类型的套接字，通常使用 TCP 协议，对于 AF_INET 和 SOCK_DGRAM 类型的套接字，通常使用 UDP 协议
 	//
 
-	// 1. 创建一个 socket，协议族是 AF_NETLINK，并且使用原始套接字
+	// 1. 创建一个 socket，协议族是 AF_NETLINK，并且使用原始数据套接字
 	// NETLINK_ROUTE 用户空间的路由守护程序之间的通讯通道，比如BGP,OSPF,RIP以及内核数据转发模块。用户态的路由守护程序通过此类型的协议来更新内核中的路由表。
 	fd, err := syscall.Socket(syscall.AF_NETLINK, syscall.SOCK_RAW, syscall.NETLINK_ROUTE)
 	if err != nil {
@@ -38,8 +39,8 @@ func getNetlinkSocket() (*NetlinkSocket, error) {
 		fd: fd,
 	}
 	// 3. 初始化 sa，SockaddrNetlink(Sockaddr)，即:
-	// 		- pid: Socket的Port号，即要发送给哪个Socket，就指定为它的Port号，默认初始化 0
-	// 		- Groups: 是要发送的多播组，即将Netlink消息发送给哪些多播组，默认初始化 0
+	// 		- pid: Socket的Port号，即要发送给哪个Socket，就指定为它的Port号，默认初始化 0（0 表示内核 socket）
+	// 		- Groups: 是要发送的多播组，即将Netlink消息发送给哪些多播组，默认初始化 0 (表示 单播)
 	//		- Family: 协议族，必须指定为 AF_NETLINK
 	s.sa.Family = syscall.AF_NETLINK
 
@@ -57,14 +58,48 @@ func (s *NetlinkSocket) Close() {
 	syscall.Close(s.fd)
 }
 
-//  netlink 就是 socket 直接的通信
-
-// Send 发送消息给当前 socket
+// Send 发送消息给当前 socket(内核socket)，目标是 NetlinkSocket.sa
+// 应用层向内核传递消息可以使用 sendto() 或 sendmsg() 函数
+// 其中 sendmsg 函数需要应用程序手动封装 msghdr 消息结构，而 sendto() 函数则会由内核代为分配
 func (s *NetlinkSocket) Send(request *NetlinkRequest) error {
 	return syscall.Sendto(s.fd, request.ToWireFormat(), 0, &s.sa)
 }
 
 // Receive 当前 socket 接收消息
 func (s *NetlinkSocket) Receive() ([]syscall.NetlinkMessage, error) {
+	// 获取分页的页面大小（page size），这里分一页（一般 4k），是为了效率最高
+	pageSize := syscall.Getpagesize()
+	// 创建缓冲区，一个 page size 大小
+	receiveBuff := make([]byte, pageSize)
 
+	// 从 Socket 中接收返回结果，保存在缓冲区receiveBuff中
+	lenBuff, _, err := syscall.Recvfrom(s.fd, receiveBuff, 0)
+	if err != nil {
+		return nil, err
+	}
+
+	// 检查数据长度
+	if lenBuff < syscall.NLMSG_HDRLEN { // 如果接收数据的总长度还不够 NLMSG 的header长度
+		return nil, ErrShortResponse
+	}
+
+	// 取出数据，转成 []NetlinkMessage 结构
+	receiveBuff = receiveBuff[:lenBuff]
+	return syscall.ParseNetlinkMessage(receiveBuff)
+}
+
+// GetPid 用于解析 socket fd，从中提取出与特定进程的 PID。
+func (s *NetlinkSocket) GetPid() (uint32, error) {
+	// 从套接字中获取 pid
+	sa, err := syscall.Getsockname(s.fd)
+	if err != nil {
+		return 0, err
+	}
+
+	switch v := sa.(type) {
+	case *syscall.SockaddrNetlink:
+		return v.Pid, nil
+	}
+
+	return 0, ErrWrongSockType
 }
