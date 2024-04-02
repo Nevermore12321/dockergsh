@@ -12,5 +12,6 @@ default via 192.168.0.1 dev wlp4s0 proto dhcp src 192.168.0.100 metric 600
 ```
 */
 func NetworkGetRoutes() ([]Route, error) {
-
+	// 创建 socket
+	socket, err := getNetlinkSocket()
 }

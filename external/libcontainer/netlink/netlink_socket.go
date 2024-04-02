@@ -1,14 +1,18 @@
 package netlink
 
-import "syscall"
+import (
+	"fmt"
+	"io"
+	"syscall"
+)
 
 type NetlinkSocket struct {
-	fd int                     // 发送套接字
-	sa syscall.SockaddrNetlink // 目标地址
+	fd int                     // 套接字描述符
+	sa syscall.SockaddrNetlink // Sockaddr
 }
 
 // getNetlinkSocket 创建 NetlinkSocket 实例对象
-// 目标socket 是 NetlinkSocket.sa 中定义，应用程序自行初始化 sa
+// NetlinkSocket.sa 中定义了 Sockaddr，目标地址是 pid=0
 func getNetlinkSocket() (*NetlinkSocket, error) {
 	// 1. 创建 socket，使用 int socket(int domain, int type, int protocol); 系统调用
 	//	domain：表示套接字的协议域（或地址族），指定了套接字通信所使用的协议类型。常见的协议族包括：
@@ -44,7 +48,7 @@ func getNetlinkSocket() (*NetlinkSocket, error) {
 	//		- Family: 协议族，必须指定为 AF_NETLINK
 	s.sa.Family = syscall.AF_NETLINK
 
-	// 3. 将 socket 描述符与 SockaddrNetlink 绑定
+	// 4. 将 socket 描述符与 SockaddrNetlink 绑定
 	if err := syscall.Bind(fd, &s.sa); err != nil { // bind failed
 		syscall.Close(fd)
 		return nil, err
@@ -88,7 +92,7 @@ func (s *NetlinkSocket) Receive() ([]syscall.NetlinkMessage, error) {
 	return syscall.ParseNetlinkMessage(receiveBuff)
 }
 
-// GetPid 用于解析 socket fd，从中提取出与特定进程的 PID。
+// GetPid 用于解析 socket fd，从中提取出与特定进程(端口)的 PID。
 func (s *NetlinkSocket) GetPid() (uint32, error) {
 	// 从套接字中获取 pid
 	sa, err := syscall.Getsockname(s.fd)
@@ -102,4 +106,57 @@ func (s *NetlinkSocket) GetPid() (uint32, error) {
 	}
 
 	return 0, ErrWrongSockType
+}
+
+// CheckMessage 校验消息的合法性，校验消息中的 seq 和 pid 是否与参数一致
+// seq - 消息序列号，用以将消息排队\
+// pid - 进程（端口）ID 号，用户进程来说就是其 socket 所绑定的 ID 号
+func (s *NetlinkSocket) CheckMessage(msg syscall.NetlinkMessage, seq, pid uint32) error {
+	// 检查返回的消息的 Header 中的 Seq 是否一致
+	if msg.Header.Seq != seq {
+		return fmt.Errorf("netlink -: invalid seq %d, expected %d", msg.Header.Seq, seq)
+	}
+
+	// 检查返回的消息的 Header 中的 Pid 是否一致
+	if msg.Header.Pid != pid {
+		return fmt.Errorf("netlink -: wrong pid %d, expected %d", msg.Header.Pid, pid)
+	}
+
+	switch msg.Header.Type {
+	case syscall.NLMSG_DONE: // 如果返回消息的类型是 Done，表示已经接收完成
+		return io.EOF
+	case syscall.NLMSG_ERROR: // 如果返回消息的类型是 ERROR，获取错误码, data前4位表示长度
+		errNum := int64(native.Uint32(msg.Data[0:4]))
+		if errNum == 0 {
+			return io.EOF
+		}
+		return syscall.Errno(-errNum)
+	}
+	return nil
+}
+
+// HandleAck 接收并校验消息的完整性
+func (s *NetlinkSocket) HandleAck(seq uint32) error {
+	pid, err := s.GetPid()
+	if err != nil {
+		return err
+	}
+
+outer:
+	for {
+		msgs, err := s.Receive() // 接收所有消息体
+		if err != nil {
+			return err
+		}
+		for _, msg := range msgs { // 遍历所有消息，校验
+			if err := s.CheckMessage(msg, seq, pid); err != nil {
+				if err == io.EOF { // 如果消息以 EOF 结束，表示接收成功
+					break outer // 跳出外层循环
+				}
+				return err
+			}
+
+		}
+	}
+	return nil
 }
