@@ -108,7 +108,7 @@ func (s *NetlinkSocket) GetPid() (uint32, error) {
 	return 0, ErrWrongSockType
 }
 
-// CheckMessage 校验消息的合法性，校验消息中的 seq 和 pid 是否与参数一致
+// CheckMessage 校验消息的合法性，校验消息中的 seq 和 pid 是否与参数一致，并判断消息是否接收完成（EOF）
 // seq - 消息序列号，用以将消息排队\
 // pid - 进程（端口）ID 号，用户进程来说就是其 socket 所绑定的 ID 号
 func (s *NetlinkSocket) CheckMessage(msg syscall.NetlinkMessage, seq, pid uint32) error {

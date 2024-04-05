@@ -36,6 +36,106 @@ type NetlinkRequestData interface {
 	ToWireFormat() []byte // 编码成二进制字节数组
 }
 
+// IfInfomsg 重新创建是为了添加方法
+// IfInfomsg 表示网络接口的信息，包括网络接口的索引、名称、类型等属性
+// 对应于 Linux 内核中的 struct ifinfomsg 结构体，用于获取和设置网络接口的属性
+type IfInfomsg struct {
+	syscall.IfInfomsg
+}
+
+// IfInfomsg 实例化
+// 地址族（family）：地址族指定了套接字所使用的地址类型
+func newIfInfomsg(family uint8) *IfInfomsg {
+	return &IfInfomsg{
+		IfInfomsg: syscall.IfInfomsg{
+			Family: family,
+		},
+	}
+}
+
+// ToWireFormat 将 IfInfomsg 报文转成二进制字节数组，实现 NetlinkRequestData 接口
+func (ifmsg *IfInfomsg) ToWireFormat() []byte {
+	length := syscall.SizeofIfInfomsg // IfInfomsg 消息长度
+	dataBytes := make([]byte, length) // 根据 IfInfomsg 消息长度初始化字节数组
+
+	// 因为 IfInfomsg 消息的前两个元素(Family，X__ifi_pad - 用于填充结构体以保持与内核数据结构的对齐)是 uint8 类型，也就是8位，分别占一个字节，因此直接设置
+	dataBytes[0] = ifmsg.Family
+	dataBytes[1] = 0
+	native.PutUint16(dataBytes[2:4], ifmsg.Type)          // [2,3] 位表示 IfInfomsg.Type
+	native.PutUint32(dataBytes[4:8], uint32(ifmsg.Index)) // [4,7] 位表示 IfInfomsg.Index
+	native.PutUint32(dataBytes[8:12], ifmsg.Flags)        // [8,11] 位表示 IfInfomsg.Flags
+	native.PutUint32(dataBytes[12:16], ifmsg.Change)      // [12,15] 位表示 IfInfomsg.Change
+
+	return dataBytes
+}
+
+// Len 返回 IfInfomsg 长度，实现 NetlinkRequestData 接口
+func (ifmsg *IfInfomsg) Len() int {
+	return syscall.SizeofIfInfomsg
+}
+
+// RtMsg 是 rtnetlink 消息的一个结构体
+// 用于表示从内核接收或发送的网络路由信息。该结构体包含了与路由相关的各种属性，如目的地址、网关地址、路由表索引等
+//   - Family: 表示地址族，如 IPv4 或 IPv6。
+//   - Dst_len: 目的地址长度。
+//   - Src_len: 源地址长度。
+//   - Tos: 服务类型。
+//   - Table: 路由表索引。
+//   - Protocol: 使用的协议。
+//     ...
+type RtMsg struct {
+	syscall.RtMsg
+}
+
+// Table:RT_TABLE_MAIN
+//   - 主路由表，使用传统命令route -n所看到的路由表就是main的内容
+//   - linux系统在默认情况下使用这份路由表的内容来传输数据包。正常情况下，只有配置好网卡的网络设置，便会自动生成main路由表的内容
+//
+// Protocol:RTPROT_BOOT
+//   - 网卡启动时建立的路由
+//
+// Scope:RT_SCOPE_UNIVERSE
+//   - 全局路由
+//
+// Type:RTN_UNICAST
+//   - 单播（unicast）路由，即指向单个目的地址的路由
+func newRtMsg() *RtMsg {
+	return &RtMsg{
+		RtMsg: syscall.RtMsg{
+			Table:    syscall.RT_TABLE_MAIN,
+			Protocol: syscall.RTPROT_BOOT,
+			Scope:    syscall.RT_SCOPE_UNIVERSE,
+			Type:     syscall.RTN_UNICAST,
+		},
+	}
+}
+
+// ToWireFormat 将 RtMsg 报文转成二进制字节数组，实现 NetlinkRequestData 接口
+func (rtMsg *RtMsg) ToWireFormat() []byte {
+	// ToWireFormat 的逻辑都一致
+	length := syscall.SizeofRtMsg
+	dataBytes := make([]byte, length)
+	dataBytes[0] = rtMsg.Family
+	dataBytes[1] = rtMsg.Dst_len
+	dataBytes[2] = rtMsg.Src_len
+	dataBytes[3] = rtMsg.Tos
+	dataBytes[4] = rtMsg.Table
+	dataBytes[5] = rtMsg.Protocol
+	dataBytes[6] = rtMsg.Scope
+	dataBytes[7] = rtMsg.Type
+	native.PutUint32(dataBytes[8:12], rtMsg.Flags) // Flags 标志是 int32,有 4B，其他标志都是 uint8,只有1字节
+	return dataBytes
+}
+
+// Len 返回 RtMsg 长度，实现 NetlinkRequestData 接口
+func (ifmsg *RtMsg) Len() int {
+	return syscall.SizeofRtMsg
+}
+
+// 上面是各类 request data ，以及实现方法
+// ===============================================
+// 下面是完整的 request 信息
+
 // NetlinkRequest netlink 协议发送的消息，Netlink的报文由消息头和消息体构成
 // NlMsghdr 结构体的定义通常与 C 语言中的 struct nlmsghdr 类似，它包含了以下字段：
 //   - Len：表示整个消息的长度，单位是字节。包括了Netlink消息头本身
@@ -50,6 +150,18 @@ type NetlinkRequestData interface {
 type NetlinkRequest struct {
 	syscall.NlMsghdr                      // 消息头
 	Data             []NetlinkRequestData // 数据体
+}
+
+// NetlinkRequest 实例化
+func newNetlinkRequest(proto, flags int) *NetlinkRequest {
+	return &NetlinkRequest{
+		NlMsghdr: syscall.NlMsghdr{
+			Len:   uint32(syscall.NLA_HDRLEN), // 此时初始化的是 header 的长度
+			Type:  uint16(proto),
+			Flags: syscall.NLM_F_REQUEST | uint16(flags),
+			Seq:   atomic.AddUint32(&nextSeqNr, 1), // 每次请求都有一个 Seq 序号
+		},
+	}
 }
 
 // ToWireFormat 将 netlink 发送的完整报文转成二进制字节数组
@@ -92,17 +204,5 @@ func (req *NetlinkRequest) ToWireFormat() []byte {
 func (req *NetlinkRequest) AddData(data NetlinkRequestData) {
 	if data != nil {
 		req.Data = append(req.Data, data)
-	}
-}
-
-// NetlinkRequest 实例化
-func newNetlinkRequest(proto, flags int) *NetlinkRequest {
-	return &NetlinkRequest{
-		NlMsghdr: syscall.NlMsghdr{
-			Len:   uint32(syscall.NLA_HDRLEN), // 此时初始化的是 header 的长度
-			Type:  uint16(proto),
-			Flags: syscall.NLM_F_REQUEST | uint16(flags),
-			Seq:   atomic.AddUint32(&nextSeqNr, 1),
-		},
 	}
 }
