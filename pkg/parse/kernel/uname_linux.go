@@ -11,7 +11,7 @@ import "syscall"
 func uname() (*syscall.Utsname, error) {
 	utsname := &syscall.Utsname{}
 
-	if err := syscall.uname(utsname); err != nil {
+	if err := syscall.Uname(utsname); err != nil {
 		return nil, err
 	}
 	return utsname, nil

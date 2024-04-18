@@ -3,9 +3,10 @@ package engine
 import "strings"
 
 // Env 就是每个 job 所需要的 环境变量设置
+// 格式就是 KEY=VALUE
 type Env []string
 
-// 统一设置 key=value 环境变量，都是 string 类型，格式为 key=value 列表
+// Set 统一设置 key=value 环境变量，都是 string 类型，格式为 key=value 列表
 func (env *Env) Set(key, value string) {
 	*env = append(*env, key+"="+value)
 }

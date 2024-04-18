@@ -9,6 +9,7 @@ func selinuxSetDisabled() {
 	selinux.SetDisabled()
 }
 
-func selinuxFreeLxcContexts(label string) {
-	selinux.FreeLxcContexts(label)
-}
+// todo
+//func selinuxFreeLxcContexts(label string) {
+//	selinux.FreeLxcContexts(label)
+//}

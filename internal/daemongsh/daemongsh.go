@@ -38,7 +38,7 @@ func NewDaemongshFromDirectory(config *Config, eng *engine.Engine) (*Daemongsh, 
 		config.Mtu = GetDefaultNetworkMtu()
 	}
 	// 1.2 检测网桥配置信息，即 BridgeIface 和 BridgeIP
-	// BridgeIface 和 BridgeIP 的作用是为创建网桥的任务 init_networkdriver 提供参数r
+	// BridgeIface 和 BridgeIP 的作用是为创建网桥的任务 init_networkdriver 提供参数
 	if config.BridgeIp != "" && config.BridgeIface != "" {
 		// 若config中BridgeIface和BridgeIP两个属性均不为空，则返回nil对象，并返回错误信息
 		/*
@@ -112,7 +112,7 @@ func NewDaemongshFromDirectory(config *Config, eng *engine.Engine) (*Daemongsh, 
 	if err != nil {
 		log.Fatalf("Unable to get the TempDir under %s: %s", config.Root, err)
 	}
-	// 3.2 通过tmp，找到一个指向 tmp 的文件符号连接的 目标文件 realTmp
+	// 3.2 通过 tmp（config.root），找到一个指向 tmp 的实际的绝对目录 realTmp
 	realTmp, err := utils.ReadSymlinkedDirectory(tmp)
 	if err != nil {
 		log.Fatalf("Unable to get the full path to the TempDir (%s): %s", tmp, err)
@@ -150,6 +150,46 @@ func NewDaemongshFromDirectory(config *Config, eng *engine.Engine) (*Daemongsh, 
 		return nil, err
 	}
 	log.Debugf("Using Graph Driver %s", driver)
+	return nil, nil
+}
+
+// 向 engine 中注册所有可执行的任务
+func (daemon *Daemongsh) Install(eng *engine.Engine) error {
+	// 所有任务
+	jobs := map[string]engine.Handler{
+		//"attach":            daemon.ContainerAttach,
+		//"build":             daemon.CmdBuild,
+		//"commit":            daemon.ContainerCommit,
+		//"container_changes": daemon.ContainerChanges,
+		//"container_copy":    daemon.ContainerCopy,
+		//"container_inspect": daemon.ContainerInspect,
+		//"containers":        daemon.Containers,
+		//"create":            daemon.ContainerCreate,
+		//"delete":            daemon.ContainerDestroy,
+		//"export":            daemon.ContainerExport,
+		//"info":              daemon.CmdInfo,
+		//"kill":              daemon.ContainerKill,
+		"logs": daemon.ContainerLogs,
+		//"pause":             daemon.ContainerPause,
+		//"resize":            daemon.ContainerResize,
+		//"restart":           daemon.ContainerRestart,
+		//"start":             daemon.ContainerStart,
+		//"stop":              daemon.ContainerStop,
+		//"top":               daemon.ContainerTop,
+		//"unpause":           daemon.ContainerUnpause,
+		//"wait":              daemon.ContainerWait,
+		//"image_delete":      daemon.ImageDelete,
+	}
+
+	// 将所有 jobs 注册到 engine 中
+	for name, method := range jobs {
+		err := eng.Register(name, method)
+		if err != nil {
+			return err
+		}
+	}
+	// todo
+	return nil
 }
 
 // 检测内核的版本以及主机处理器类型
@@ -172,4 +212,5 @@ func checkKernelAndArch() error {
 			}
 		}
 	}
+	return nil
 }

@@ -8,8 +8,6 @@ builtins 是 Docker Daemon运行过程中，注册的一些任务（Jobs）
 
 import (
 	"github.com/Nevermore12321/dockergsh/internal/engine"
-	"github.com/Nevermore12321/dockergsh/internal/events"
-	"github.com/Nevermore12321/dockergsh/internal/registry"
 )
 
 // Register 加载 builtins，向 engine 注册多个 Handler，以便后续在执行相应任务时，运行指定的 Handler
@@ -26,9 +24,9 @@ func Register(eng *engine.Engine) error {
 	}
 
 	// 3. 注册events事件处理方法
-	if err := events.New().Install(eng); err != nil {
-		return err
-	}
+	//if err := events.New().Install(eng); err != nil {
+	//	return err
+	//}
 
 	// 4. 注册版本处理方法
 	if err := eng.Register("version", dockergshVersion); err != nil {
@@ -36,7 +34,8 @@ func Register(eng *engine.Engine) error {
 	}
 
 	// 5. 注册registry(镜像仓库)处理方法
-	return registry.NewService().Install(eng)
+	//return registry.NewService().Install(eng)
+	return nil
 }
 
 // 网络初始化 job，todo 网络栈初始化
@@ -45,18 +44,22 @@ func Register(eng *engine.Engine) error {
 // 3. 配置网络iptables规则。
 // 4. 另外还为 eng 对象注册了多个 Handler，如 allocate_interface、release_interface、allocate_port以及link等。
 func daemon(eng *engine.Engine) error {
-	return eng.Register("init_networkdriver", bridge.InitDriver)
+	// todo
+	//return eng.Register("init_networkdriver", bridge.InitDriver)
+	return nil
 }
 
 // API 初始化 job
 // 1. ServeApi执行时，通过循环多种指定协议，创建出goroutine来配置指定的http.Server，最终为不同协议的请求服务（也就是 server 接收请求）
 // 2. AcceptConnections的作用主要是：通知宿主机上init守护进程Docker Daemon已经启动完毕，可以让Docker Daemon开始服务API请求
 func remote(eng *engine.Engine) error {
-	if err := eng.Register("serveapi", apiserver.ServeApi); err != nil {
-		return err
-	}
+	// todo
+	//if err := eng.Register("serveapi", apiserver.ServeApi); err != nil {
+	//	return err
+	//}
 
-	return eng.Register("acceptconnections", apiserver.AcceptConnections)
+	//return eng.Register("acceptconnections", apiserver.AcceptConnections)
+	return nil
 }
 
 // 名为 `version` Job 的处理函数 handler

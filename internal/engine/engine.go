@@ -147,7 +147,8 @@ func (eng *Engine) Job(name string, args ...string) *Job {
 	// 如果engine 开启了日志，添加 job 的日志输出
 	// todo
 	if eng.Logging {
-		job.Stderr.Add()
+		//job.Stderr.Add(utils.NopWriteCloser(eng.Stderr))
+		job.Stderr.Add(eng.Stderr)
 	}
 
 	// 在 engine 的 hanlers 任务作业Job列表中寻找当前 job

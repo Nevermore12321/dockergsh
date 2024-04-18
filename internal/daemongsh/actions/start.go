@@ -80,7 +80,7 @@ func mainDaemon(context *cli.Context, hosts []string) {
 		}
 	}()
 
-	//7）打印Docker版本及驱动信息。
+	// 7）打印Docker版本及驱动信息。
 	log.Printf("docker daemon: %s %s; execdriver: %s; graphdriver: %s",
 		utils.VERSION,
 		utils.GITCOMMIT,

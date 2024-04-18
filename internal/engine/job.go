@@ -101,9 +101,9 @@ func (job *Job) Run() error {
 		job.Eng.Logf("-job %s%s", job.CallString(), job.StatusString())
 	}()
 
-	// 错误信息 todo
+	// 错误信息
 	var errMessage = bytes.NewBuffer(nil)
-	job.Stderr.Add(errMessage)
+	job.Stderr.Add(errMessage) // 添加输出流到 buffer
 
 	// 如果有 handler，执行 job 任务
 	if job.handler == nil {
@@ -129,7 +129,7 @@ func (job *Job) Run() error {
 
 	// 如果返回状态不为0，即返回错误
 	if job.status != 0 {
-		return fmt.Errorf("%s", Tail(errMessage))
+		return fmt.Errorf("%s", Tail(errMessage, 1))
 	}
 	return nil
 }
