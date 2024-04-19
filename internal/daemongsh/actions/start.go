@@ -28,7 +28,7 @@ func CmdStart(context *cli.Context) error {
 		return ErrCmdFormat
 	}
 	// 从环境变量中获取 hosts 信息
-	hostsEnv := context.String(utils.DockergshHosts)
+	hostsEnv := os.Getenv(utils.DockergshHosts)
 	hosts := strings.Split(hostsEnv, ",")
 
 	mainDaemon(context, hosts)

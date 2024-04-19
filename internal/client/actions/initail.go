@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/Nevermore12321/dockergsh/internal/utils"
 	"github.com/urfave/cli/v2"
+	"os"
 	"strings"
 )
 import "github.com/Nevermore12321/dockergsh/internal/client"
@@ -18,7 +19,7 @@ func CmdClientInitial(context *cli.Context) error {
 	}
 
 	// 从环境变量中获取 host 信息
-	host := context.String(utils.DockergshHosts)
+	host := os.Getenv(utils.DockergshHosts)
 	protohost := strings.SplitN(host, "://", 2) // 获取通过：//分割的两部分
 
 	// 初始化 dockergshclient

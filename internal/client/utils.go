@@ -40,6 +40,8 @@ func PreCheckConfTLS(context *cli.Context) (*tls.Config, error) {
 			}
 			tlsConfig.Certificates = []tls.Certificate{cert}
 		}
+		return &tlsConfig, nil
+	} else {
+		return nil, nil
 	}
-	return &tlsConfig, nil
 }

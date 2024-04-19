@@ -17,7 +17,7 @@ func initSubCmd(root *cli.App) {
 		&cli.Command{
 			Name:   "client",
 			Usage:  GetHelpUsage("client"),
-			Action: clintActions.CmdClientInitial,
+			Before: clintActions.CmdClientInitial,
 			Subcommands: cli.Commands{
 				{
 					Name:   "pull",

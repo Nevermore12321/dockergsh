@@ -18,7 +18,7 @@ func Validates(vals []string, validate func(string) (string, error)) []string {
 	var parsed []string
 	for _, val := range vals {
 		parsedVal, err := validate(val)
-		if err == nil {
+		if err != nil {
 			log.Warningf("%s is not a correct format", val)
 			continue
 		}

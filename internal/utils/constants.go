@@ -5,7 +5,7 @@ import "os"
 // dockergsh dockergsh 相关默认值
 const (
 	DefaultHttpHost   = "127.0.0.1"
-	DefaultUnixSocket = "/var/run/docker.sock"
+	DefaultUnixSocket = "/var/run/dockergsh.sock"
 )
 
 // dockergsh dockergsh 相关的环境变量名称

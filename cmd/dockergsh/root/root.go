@@ -35,7 +35,6 @@ func Initial(name string, in io.Reader, out, err io.Writer) {
 	// 初始化 RootCmd 的 flags
 	RootCmd.Flags = cmdCommonFlags()
 
-	RootCmd.Action = rootAction
 	RootCmd.Before = rootBefore
 	RootCmd.After = rootAfter
 
@@ -43,7 +42,11 @@ func Initial(name string, in io.Reader, out, err io.Writer) {
 	initSubCmd(RootCmd)
 }
 
-func rootAction(context *cli.Context) error {
+func rootBefore(context *cli.Context) error {
+	// 命令运行前的初始化 logrus 的日志配置
+	logrus.SetFormatter(&logrus.JSONFormatter{})
+	logrus.SetOutput(context.App.Writer)
+
 	// todo reexec
 
 	// 是否开启 debug
@@ -55,14 +58,6 @@ func rootAction(context *cli.Context) error {
 	if err := PreCheckConfHost(context); err != nil {
 		return err
 	}
-	return nil
-
-}
-
-func rootBefore(context *cli.Context) error {
-	// 命令运行前的初始化 logrus 的日志配置
-	logrus.SetFormatter(&logrus.JSONFormatter{})
-	logrus.SetOutput(context.App.Writer)
 	return nil
 }
 

@@ -25,6 +25,8 @@ func NetworkGetRoutes() ([]Route, error) {
 		return nil, err
 	}
 
+	defer socket.Close()
+
 	// 2. 创建 请求体
 	// 创建 NlMsghdr 头
 	// syscall.RTM_GETROUTE 表示请求方法，想要获取路由信息
@@ -65,7 +67,7 @@ outer: // 遍历所有返回消息
 			}
 
 			// 如果返回的结果不是RTM_GETROUTE类型（获取路由信息的发送类型）
-			if resMsg.Header.Type != syscall.RTM_GETROUTE {
+			if resMsg.Header.Type != syscall.RTM_NEWROUTE {
 				continue
 			}
 

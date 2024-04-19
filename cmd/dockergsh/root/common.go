@@ -84,8 +84,8 @@ func PreCheckConfDebug(context *cli.Context) error {
 func PreCheckConfHost(context *cli.Context) error {
 	// hosts的作用 dockergsh 要连接的目的地址，也就是 dockergsh daemon 的地址
 	hosts := context.StringSlice("hosts")
-	isDaemon := context.Command.Name == "daemon"
-	isClient := context.Command.Name == "client"
+	isDaemon := context.Args().Get(0) == "daemon"
+	isClient := context.Args().Get(0) == "client"
 
 	if len(hosts) == 0 { // 如果没有传入 hosts 地址
 		// 首先获取 DOCKERGSH_HOST 环境变量的值
@@ -112,8 +112,7 @@ func PreCheckConfHost(context *cli.Context) error {
 	}
 
 	// 传递给后续 dockergsh 子命令
-	return context.Set(utils.DockergshHosts, strings.Join(parsedHosts, ","))
-
+	return os.Setenv(utils.DockergshHosts, strings.Join(parsedHosts, ","))
 }
 
 func GetHelpUsage(method string) string {
