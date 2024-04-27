@@ -33,8 +33,13 @@ type Driver interface {
 	String() string                 //  driver 的打印输出格式
 	Create(id, parent string) error // 创建存储层
 	Remove(id string) error         // 删除存储层
+	Exists(id string) bool          // 判断存储层是否已经存在
 
 	// todo put get exists status cleanups
+}
+
+func init() {
+	drivers = make(map[string]InitFunc)
 }
 
 // GetDriver 通过 driver 的名称、根路径，获取 graph-driver

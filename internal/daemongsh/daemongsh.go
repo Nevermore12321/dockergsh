@@ -4,18 +4,18 @@ import (
 	"fmt"
 	"github.com/Nevermore12321/dockergsh/internal/daemongsh/graphdriver"
 	"github.com/Nevermore12321/dockergsh/internal/engine"
+	"github.com/Nevermore12321/dockergsh/internal/graph"
 	"github.com/Nevermore12321/dockergsh/internal/utils"
 	"github.com/Nevermore12321/dockergsh/pkg/parse/kernel"
 	log "github.com/sirupsen/logrus"
 	"os"
+	"path"
 	"runtime"
 )
 
-/*
-在 Dockergsh架构中 Daemongsh 支撑着整个后台进程的运行，
-同时也统一化管理着 Docker 架构中 graph、graphdriver、execdriver、volumes、Docker 容器等众多资源。
-可以说，Dockergsh Daemongsh复杂的运作均由daemongsh对象来调度
-*/
+// Daemongsh 在 Dockergsh架构中 Daemongsh 支撑着整个后台进程的运行，
+// 同时也统一化管理着 Docker 架构中 graph、graphdriver、execdriver、volumes、Docker 容器等众多资源。
+// 可以说，Dockergsh Daemongsh复杂的运作均由daemongsh对象来调度
 // todo add elements
 type Daemongsh struct {
 }
@@ -47,7 +47,7 @@ func NewDaemongshFromDirectory(config *Config, eng *engine.Engine) (*Daemongsh, 
 				2. 当用户不选已经存在的网桥接口作为Docker网桥时，Docker会另行创建一个全新的网桥接口作为Docker网桥，此时用户可以为此新创建的网桥接口设定自定义IP地址；
 				3. 当然两者都不选的话，Docker会为用户接管完整的Docker网桥创建流程，从创建默认的网桥接口，到尾网桥接口设置默认的IP地址
 		*/
-		return nil, fmt.Errorf("You specified -b & --bip, mutually exclusive options. Please specify only one.")
+		return nil, fmt.Errorf("you specified -b & --bip, mutually exclusive options. Please specify only one")
 	}
 
 	// 1.3 查验容器间的通信配置，即 EnableIptables 和 Inter-Container Communication 属性
@@ -62,7 +62,7 @@ func NewDaemongshFromDirectory(config *Config, eng *engine.Engine) (*Daemongsh, 
 				1. 若 InterContainerCommunication 的值为false，则Docker Daemon会在宿主机iptables的FORWARD链中添加一条Docker容器间流量均DROP的规则；
 				2. 若 InterContainerCommunication 为true，则Docker Daemon会在宿主机iptables的FORWARD链中添加一条Docker容器间流量均ACCEPT的规则。
 		*/
-		return nil, fmt.Errorf("You specified --iptables=false with --icc=false. ICC uses iptables to function. Please set --icc or --iptables to true.")
+		return nil, fmt.Errorf("you specified --iptables=false with --icc=false. ICC uses iptables to function. Please set --icc or --iptables to true")
 	}
 
 	// 1.4 网络相关配置，即 DisableNetwork 属性
@@ -106,7 +106,7 @@ func NewDaemongshFromDirectory(config *Config, eng *engine.Engine) (*Daemongsh, 
 	}
 
 	/* -------------- */
-	// 3.配置工作目录
+	// 3.配置工作目录，包括：所有的Docker镜像内容、所有Docker容器的文件系统、所有Docker容器的元数据、所有容器的数据卷内容等
 	// 3.1 使用规范路径创建一个TempDir，路径名为 tmp
 	tmp, err := utils.TempDir(config.Root)
 	if err != nil {
@@ -118,7 +118,7 @@ func NewDaemongshFromDirectory(config *Config, eng *engine.Engine) (*Daemongsh, 
 		log.Fatalf("Unable to get the full path to the TempDir (%s): %s", tmp, err)
 	}
 	// 3.3 使用realTemp的值，创建并赋值给环境变量TMPDIR
-	os.Setenv(utils.DaemongshTempdir, realTmp)
+	_ = os.Setenv(utils.DaemongshTempdir, realTmp)
 	// 3.4 处理config的属性EnableSelinuxSupport,如果不开启 selinux，将其关闭
 	if !config.EnableSelinuxSupport {
 		selinuxSetDisabled()
@@ -140,7 +140,7 @@ func NewDaemongshFromDirectory(config *Config, eng *engine.Engine) (*Daemongsh, 
 	}
 
 	/* -------------- */
-	// 4. 加载并配置 graphdriver
+	// 4. 加载并配置 graphdriver，镜像管理所需的驱动环境
 	// 4.1 配置默认的 graphdriver
 	graphdriver.DefaultDriver = config.GraphDriver
 
@@ -150,10 +150,30 @@ func NewDaemongshFromDirectory(config *Config, eng *engine.Engine) (*Daemongsh, 
 		return nil, err
 	}
 	log.Debugf("Using Graph Driver %s", driver)
+
+	// 4.3 由于在btrfs文件系统上运行的Docker不兼容SELinux，因此启用SELinux的支持，并且驱动的类型为btrfs不能同时设置
+	if config.EnableSelinuxSupport && driver.String() == "btrfs" {
+		return nil, fmt.Errorf("SELinux is not supported with the BTRFS graph driver")
+	}
+
+	// 4.4 创建容器仓库目录，存储容器的元数据信息，/var/lib/dockergsh/containers
+	daemonContainerRepo := path.Join(config.Root, "containers")
+	if err := os.MkdirAll(daemonContainerRepo, 0700); err != nil && !os.IsExist(err) {
+		return nil, err
+	}
+
+	// 4.5 创建镜像graph，通过Docker的root目录以及graphdriver实例，实例化一个全新的graph对象，用以管理在文件系统中Docker的root路径下graph目录的内容
+	log.Debugf("Creating images graph")
+	g, err := graph.NewGraph(path.Join(config.Root, "graph"), driver)
+	fmt.Println(g)
+	if err != nil {
+		return nil, err
+	}
+
 	return nil, nil
 }
 
-// 向 engine 中注册所有可执行的任务
+// Install 向 engine 中注册所有可执行的任务
 func (daemon *Daemongsh) Install(eng *engine.Engine) error {
 	// 所有任务
 	jobs := map[string]engine.Handler{
@@ -196,7 +216,7 @@ func (daemon *Daemongsh) Install(eng *engine.Engine) error {
 func checkKernelAndArch() error {
 	// 检测内核的版本以及主机处理器类型, 目前支持 amd64
 	if runtime.GOARCH != "amd64" {
-		return fmt.Errorf("The Dockergsh runtime currently only supports amd64 (not %s). This will change in the future. Aborting.", runtime.GOARCH)
+		return fmt.Errorf("the Dockergsh runtime currently only supports amd64 (not %s). This will change in the future. Aborting", runtime.GOARCH)
 	}
 
 	// 检测Linux内核版本是否满足要求，建议用户升级内核版本至3.8.0或以上版本
