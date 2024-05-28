@@ -56,7 +56,7 @@ func (graph *Graph) restore() error {
 		return err
 	}
 
-	var ids = []string{}
+	var ids []string
 
 	for _, v := range dir {
 		id := v.Name()               // 文件名称就是 id

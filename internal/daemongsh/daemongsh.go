@@ -144,7 +144,7 @@ func NewDaemongshFromDirectory(config *Config, eng *engine.Engine) (*Daemongsh, 
 	// 4.1 配置默认的 graphdriver
 	graphdriver.DefaultDriver = config.GraphDriver
 
-	// 4.2 创建 graphdriver
+	// 4.2 创建 graphdriver，用来管理 graph
 	driver, err := graphdriver.New(config.Root, config.GraphOptions)
 	if err != nil {
 		return nil, err
@@ -163,13 +163,28 @@ func NewDaemongshFromDirectory(config *Config, eng *engine.Engine) (*Daemongsh, 
 	}
 
 	// 4.5 创建镜像graph，通过Docker的root目录以及graphdriver实例，实例化一个全新的graph对象，用以管理在文件系统中Docker的root路径下graph目录的内容
+	// graph driver 与 graph 是一对的
 	log.Debugf("Creating images graph")
 	g, err := graph.NewGraph(path.Join(config.Root, "graph"), driver)
-	fmt.Println(g)
 	if err != nil {
 		return nil, err
 	}
 
+	// 4.6 创建 volumesdriver 以及 volumes graph
+	// 		- 使用vfs这种类型的driver创建volumesDriver；
+	//		- 在Docker的root路径下创建volumes目录，并返回volumes这个graph对象实例
+	// 之前 4.5 创建的graphdriver 用来管理容器的文件系统，Docker需要使用volumedriver来管理数据卷。
+	// 因为数据卷的管理不会像容器文件系统管理那么复杂，故Docker采用vfs驱动实现数据卷的管理
+	volumeDriver, err := graphdriver.GetDriver("vfs", config.Root, config.GraphOptions)
+	if err != nil {
+		return nil, err
+	}
+	// volume driver 与 volume graph 是一对的
+	log.Debugf("Creating volumes graph")
+	volumeGraph, err := graph.NewGraph(path.Join(config.Root, "volumes"), volumeDriver)
+	if err != nil {
+		return nil, err
+	}
 	return nil, nil
 }
 
