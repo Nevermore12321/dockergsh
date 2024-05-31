@@ -179,11 +179,44 @@ func NewDaemongshFromDirectory(config *Config, eng *engine.Engine) (*Daemongsh, 
 	if err != nil {
 		return nil, err
 	}
-	// volume driver 与 volume graph 是一对的
+	// volume driver 与 volume graph 是一对
 	log.Debugf("Creating volumes graph")
 	volumeGraph, err := graph.NewGraph(path.Join(config.Root, "volumes"), volumeDriver)
 	if err != nil {
 		return nil, err
+	}
+
+	// 4.7 创建 tagStore
+	// TagStore 主要是用于管理存储镜像的仓库列表（repository list）
+	// 这里总结一下 graph、graphdriver、tagstore 的关系：
+	// 	- Graph：每个 Docker 镜像由多个层（layer）组成，这些层叠加在一起形成最终的镜像。Graph 组件管理这些层次结构以及它们之间的关系。
+	// 	- graphdriver：不同的存储驱动（如 aufs、btrfs、overlay、devicemapper 等）实现了不同的 GraphDriver 接口，以适应各种存储后端。
+	// 	- tagstore：管理镜像标签（tags）的组件。它维护了镜像名称与具体镜像 ID 之间的映射关系
+	// TagStore 管理镜像tag ，graph 通过管理镜像的 id，graphdriver 调用底层驱动创建 layer
+	log.Debugf("Creating repository list")
+	repositories, err := graph.NewTagStore(path.Join(config.Root, "repositories-"+driver.String()), g)
+	if err != nil {
+		return nil, fmt.Errorf("couldn't create Tag store: %s", err)
+	}
+
+	/* -------------- */
+	// 5. 配置Docker Daemon网络环境
+	// 	通过运行 init_networkdriver 的Job来完成
+	if !config.DisableNetwork {
+		netJob := eng.Job("init_networkdriver")
+
+		// 设置环境变量
+		netJob.SetEnvBool("EnableIptables", config.EnableIptables)
+		netJob.SetEnvBool("InterContainerCommunication", config.InterContainerCommunication)
+		netJob.SetEnvBool("EnableIpForward", config.EnableIpForward)
+		netJob.SetEnv("BridgeIface", config.BridgeIface)
+		netJob.SetEnv("BridgeIp", config.BridgeIp)
+		netJob.SetEnv("DefaultBindingIp", config.DefaultIp.String())
+
+		// 运行 init_networkdriver job，其实就是用来创建 docker0 网桥
+		if err := netJob.Run(); err != nil {
+			return nil, err
+		}
 	}
 	return nil, nil
 }

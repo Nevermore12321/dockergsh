@@ -7,6 +7,7 @@ builtins 是 Docker Daemon运行过程中，注册的一些任务（Jobs）
 */
 
 import (
+	"github.com/Nevermore12321/dockergsh/internal/daemongsh/networkdriver/bridge"
 	"github.com/Nevermore12321/dockergsh/internal/engine"
 )
 
@@ -38,15 +39,13 @@ func Register(eng *engine.Engine) error {
 	return nil
 }
 
-// 网络初始化 job，todo 网络栈初始化
+// 网络初始化 job
 // 1. 获取为Docker服务的网络设备地址。
 // 2. 创建指定IP地址的网桥。
 // 3. 配置网络iptables规则。
 // 4. 另外还为 eng 对象注册了多个 Handler，如 allocate_interface、release_interface、allocate_port以及link等。
 func daemon(eng *engine.Engine) error {
-	// todo
-	//return eng.Register("init_networkdriver", bridge.InitDriver)
-	return nil
+	return eng.Register("init_networkdriver", bridge.InitDriver)
 }
 
 // API 初始化 job

@@ -11,6 +11,10 @@ import (
 /*
 	graph 是镜像文件管理，目录在 /var/lib/dockergsh/graph
 	通过graphdriver实例，管理 graph 目录的内容
+
+Graph 与 GraphDriver：
+    - Graph 使用 GraphDriver 提供的接口与底层存储系统交互。每个镜像层的实际存储和检索操作由 GraphDriver 处理。
+    - 例如，当需要创建一个新的镜像层时，Graph 会调用 GraphDriver 的接口来实际创建并存储这个层。
 */
 
 type Graph struct {
