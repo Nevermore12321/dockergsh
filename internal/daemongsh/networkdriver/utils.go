@@ -29,3 +29,17 @@ func GetDefaultRouteIface() (*net.Interface, error) {
 	// 如果没有找到，返回 错误 ErrNoDefaultRoute
 	return nil, ErrNoDefaultRoute
 }
+
+// GetIfaceAddr 通过网络接口名称返回网络接口的 IPv4 地址
+func GetIfaceAddr(name string) (net.Addr, error) {
+	iface, err := net.InterfaceByName(name) // 通过接口名称获取接口信息
+	if err != nil {
+		return nil, err
+	}
+	// Addrs 返回特定接口的单播接口地址列表
+	addrs, err := iface.Addrs()
+	if err != nil {
+		return nil, err
+	}
+
+}
