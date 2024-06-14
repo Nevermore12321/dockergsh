@@ -1,6 +1,7 @@
 package bridge
 
 import (
+	"github.com/Nevermore12321/dockergsh/internal/daemongsh/networkdriver"
 	"github.com/Nevermore12321/dockergsh/internal/engine"
 	"net"
 )
@@ -24,7 +25,7 @@ var (
 // 4. 另外还为 eng 对象注册了多个 Handler，如 allocate_interface、release_interface、allocate_port以及link等。
 func InitDriver(job *engine.Job) engine.Status {
 	var (
-		network        *net.IPNet
+		network        *net.IPNet                                      // 网桥信息结构体
 		enableIptables = job.GetEnvBool("EnableIptables")              // 是否开启 iptables
 		icc            = job.GetEnvBool("InterContainerCommunication") // 是否允许容器相互通信
 		ipForward      = job.GetEnvBool("EnableIpForward")             // 是否允许 ip forward
@@ -44,8 +45,49 @@ func InitDriver(job *engine.Job) engine.Status {
 		bridgeIface = DefaultNetworkBridge
 	}
 
-	// 查看网桥是否已经存在
-	networkdriver.GetIfaceAddr()
+	// 判断是否创建dockergsh0网桥，若Docker专属网桥已存在，则继续往下执行；否则，创建docker0网桥
+	addr, err := networkdriver.GetIfaceAddr(bridgeIface)
+	if err != nil { // 获取网桥信息失败
+		// 如果不使用默认网桥，是用户指定的网桥，那么不去创建，直接报错
+		if !useDefaultBridge {
+			job.Logf("bridge not found: %s", bridgeIface)
+			return job.Error(err)
+		}
+
+		// 如果使用的是默认网桥，并且没有找到，则创建
+		job.Logf("creating a new bridge for %s", bridgeIface)
+		err := createBridge(bridgeIp)
+		if err != nil {
+			return job.Error(err)
+		}
+
+		// 创建完成后，再去重新获取网桥信息
+		addr, err = networkdriver.GetIfaceAddr(bridgeIface)
+		if err != nil {
+			return job.Error(err)
+		}
+		network = addr.(*net.IPNet)
+	} else { // 获取网桥信息成功
+		network = addr.(*net.IPNet)
+		// 验证网桥 ip 是否与 BridgeIP 指定的 ip 匹配
+		if bridgeIp != "" {
+			// ParseCIDR(192.0.2.1/24) => IP：192.0.2.1 and network 192.0.2.0/24
+			bip, _, err := net.ParseCIDR(bridgeIp)
+			if err != nil {
+				return job.Error(err)
+			}
+			if !network.IP.Equal(bip) {
+				return job.Errorf("bridge ip (%s) does not match existing bridge configuration %s", network.IP, bip)
+			}
+		}
+	}
 
 	return 0
 }
+
+// 创建默认网桥
+func createBridge(bridgeIp string) error {
+
+}
+
+// CreateBridgeIface 在主机系统上创建一个名为“ifaceName”的网桥接口，并尝试使用不与主机上任何其他接口冲突的地址来配置它。如果找不到不冲突的地址，则会返回错误。

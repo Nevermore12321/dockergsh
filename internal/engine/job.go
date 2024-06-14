@@ -161,14 +161,26 @@ func (job *Job) GetEnv(key string) string {
 	return job.env.Get(key)
 }
 
+// Logf 输出 Job 作业的 日志
+func (job *Job) Logf(format string, args ...interface{}) (int, error) {
+	prefixedFormat := fmt.Sprintf("[%s] %s\n", job, strings.TrimRight(format, "\n"))
+	return fmt.Fprintf(job.Stderr, prefixedFormat, args...)
+}
+
 // Printf Job 作业的 日志打印
 func (job *Job) Printf(format string, args ...interface{}) (n int, err error) {
 	return fmt.Fprintf(job.Stdout, format, args...)
 }
 
-// Errorf Job 作业的 错误日志
+// Errorf Job 作业的错误封装
 func (job *Job) Errorf(format string, args ...any) Status {
 	format = strings.TrimRight(format, "\n")
 	fmt.Fprintf(job.Stderr, format+"\n", args...)
+	return StatusErr
+}
+
+// Error Job 作业的错误封装
+func (job *Job) Error(err error) Status {
+	fmt.Fprintf(job.Stderr, "%s\n", err)
 	return StatusErr
 }

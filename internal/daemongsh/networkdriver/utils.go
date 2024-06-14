@@ -42,4 +42,22 @@ func GetIfaceAddr(name string) (net.Addr, error) {
 		return nil, err
 	}
 
+	// 获取所有 ipv4 地址
+	var addrs4 []net.Addr
+	for _, addr := range addrs {
+		ip := (addr.(*net.IPNet)).IP
+		if ipv4 := ip.To4(); len(ipv4) == net.IPv4len {
+			addrs4 = append(addrs4, addr)
+		}
+	}
+
+	// 判断是否有绑定 ipv4 地址
+	switch {
+	case len(addrs4) == 0: // 没有绑定 ip 地址，报错
+		return nil, fmt.Errorf("interface %v has no IP addresses", name)
+	case len(addrs4) > 1: // 如果绑定多个 ip 地址，使用第一个
+		fmt.Printf("Interface %v has more than 1 IPv4 address. Defaulting to using %v\n", name, (addrs4[0].(*net.IPNet)).IP)
+	}
+
+	return addrs4[0], nil
 }
