@@ -3,6 +3,7 @@ package bridge
 import (
 	"github.com/Nevermore12321/dockergsh/internal/daemongsh/networkdriver"
 	"github.com/Nevermore12321/dockergsh/internal/engine"
+	"github.com/Nevermore12321/dockergsh/pkg/networkfs/resolvconf"
 	"net"
 )
 
@@ -85,9 +86,15 @@ func InitDriver(job *engine.Job) engine.Status {
 	return 0
 }
 
-// 创建默认网桥
+// 在宿主机上创建指定名称网桥设备，并为该网桥设备配置一个与其他设备不冲突的网络地址。
 func createBridge(bridgeIp string) error {
-
+	nameserver := []string{} // /etc/resolve.conf
+	resolvConf, _ := resolvconf.Get()
+	// 这里不检查错误，因为并不真正关心是否无法读取 resolv.conf。
+	// 因此，如果 resolvConf 为 nil，会跳过追加。
+	if resolvConf != nil {
+		nameserver = append(nameserver, resolvconf.GetNameserversAsCIDR(resolvConf)...)
+	}
 }
 
 // CreateBridgeIface 在主机系统上创建一个名为“ifaceName”的网桥接口，并尝试使用不与主机上任何其他接口冲突的地址来配置它。如果找不到不冲突的地址，则会返回错误。
