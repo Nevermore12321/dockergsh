@@ -17,6 +17,22 @@ var (
 
 	// dockergsh -p 端口映射时，默认的宿主机的绑定 ip，默认 0.0.0.0
 	defaultBindingIp = net.ParseIP("0.0.0.0")
+
+	// 可选的默认网关 ip 地址 cidr
+	addrs = []string{
+		"172.17.42.1/16",
+		"10.0.42.1/16",
+		"10.1.42.1/16",
+		"10.42.42.1/16",
+		"172.16.42.1/24",
+		"172.16.43.1/24",
+		"172.16.44.1/24",
+		"10.0.42.1/24",
+		"10.0.43.1/24",
+		"192.168.42.1/24",
+		"192.168.43.1/24",
+		"192.168.44.1/24",
+	}
 )
 
 // InitDriver builtins 注册的 init_networkdriver job 的handler处理函数
@@ -95,6 +111,24 @@ func createBridge(bridgeIp string) error {
 	if resolvConf != nil {
 		nameserver = append(nameserver, resolvconf.GetNameserversAsCIDR(resolvConf)...)
 	}
+
+	var ifaceAddr string    // bridgeIp
+	if len(bridgeIp) != 0 { // 如果用户指定了 bridgeIp ，则校验
+		_, _, err := net.ParseCIDR(bridgeIp) // 校验 ip 格式
+		if err != nil {
+			return err
+		}
+		ifaceAddr = bridgeIface
+	} else {                         // 如果用户没有指定 bridgeIp，从默认的 ip cidr 中选一个
+		for _, addr := range addrs { // 遍历默认网关 ip
+			_, dockergshNetwork, err := net.ParseCIDR(addr)
+			if err != nil {
+				return err
+			}
+
+		}
+	}
+
 }
 
 // CreateBridgeIface 在主机系统上创建一个名为“ifaceName”的网桥接口，并尝试使用不与主机上任何其他接口冲突的地址来配置它。如果找不到不冲突的地址，则会返回错误。
