@@ -61,3 +61,51 @@ func GetIfaceAddr(name string) (net.Addr, error) {
 
 	return addrs4[0], nil
 }
+
+// CheckNameserverOverlaps 检查网络是否有堆叠，也就是 ip 是否有重叠
+func CheckNameserverOverlaps(nameservers []string, toCheck *net.IPNet) error {
+	if len(nameservers) > 0 {
+		for _, ns := range nameservers {
+			_, nsNetwork, err := net.ParseCIDR(ns)
+			if err != nil {
+				return err
+			}
+
+			if NetworkOverlaps(toCheck, nsNetwork) {
+				return ErrNetworkOverlapsWithNameservers
+			}
+		}
+	}
+	return nil
+}
+
+// NetworkOverlaps 检测一个 IPNet 与另一个 IPNet 之间的是否有重叠
+// 返回 true：表示网络有堆叠
+func NetworkOverlaps(netX, netY *net.IPNet) bool {
+	// 如果 netY 中包含了 netX 的首个IP，那么 ip 有堆叠
+	if firstIP, _ := NetworkRange(netX); netY.Contains(firstIP) {
+		return true
+	}
+
+	// 如果 netX 中包含了 netY 的首个IP，那么 ip 有堆叠
+	if firstIP, _ := NetworkRange(netY); netX.Contains(firstIP) {
+		return true
+	}
+
+	return false
+}
+
+// NetworkRange 计算 IPNet 中的第一个和最后一个 IP 地址
+func NetworkRange(network *net.IPNet) (net.IP, net.IP) {
+	var (
+		netIP   = network.IP.To4()           // ipv4 地址
+		firstIP = netIP.Mask(network.Mask)   // ipv4 地址经过 mask 后的 IP，例如 192.168.0.0/16 => firstIP:192.168.0.1
+		lastIP  = net.IPv4(0, 0, 0, 0).To4() // 初始化 lastIP 为 0.0.0.0
+	)
+
+	// 逐位计算 lastIP，例如 192.168.0.0/16 => lastIP:192.168.255.255
+	for i := 0; i < len(lastIP); i++ {
+		lastIP[i] = netIP[i] | ^network.Mask[i]
+	}
+	return firstIP, lastIP
+}

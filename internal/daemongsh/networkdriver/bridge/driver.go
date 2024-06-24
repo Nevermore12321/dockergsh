@@ -1,9 +1,13 @@
 package bridge
 
 import (
+	"fmt"
+	"github.com/Nevermore12321/dockergsh/external/libcontainer/netlink"
 	"github.com/Nevermore12321/dockergsh/internal/daemongsh/networkdriver"
 	"github.com/Nevermore12321/dockergsh/internal/engine"
 	"github.com/Nevermore12321/dockergsh/pkg/networkfs/resolvconf"
+	"github.com/Nevermore12321/dockergsh/pkg/parse/kernel"
+	log "github.com/sirupsen/logrus"
 	"net"
 )
 
@@ -104,12 +108,12 @@ func InitDriver(job *engine.Job) engine.Status {
 
 // 在宿主机上创建指定名称网桥设备，并为该网桥设备配置一个与其他设备不冲突的网络地址。
 func createBridge(bridgeIp string) error {
-	nameserver := []string{} // /etc/resolve.conf
+	nameservers := []string{} // /etc/resolve.conf
 	resolvConf, _ := resolvconf.Get()
 	// 这里不检查错误，因为并不真正关心是否无法读取 resolv.conf。
 	// 因此，如果 resolvConf 为 nil，会跳过追加。
 	if resolvConf != nil {
-		nameserver = append(nameserver, resolvconf.GetNameserversAsCIDR(resolvConf)...)
+		nameservers = append(nameservers, resolvconf.GetNameserversAsCIDR(resolvConf)...)
 	}
 
 	var ifaceAddr string    // bridgeIp
@@ -119,16 +123,44 @@ func createBridge(bridgeIp string) error {
 			return err
 		}
 		ifaceAddr = bridgeIface
-	} else {                         // 如果用户没有指定 bridgeIp，从默认的 ip cidr 中选一个
+	} else { // 如果用户没有指定 bridgeIp，从默认的 ip cidr 中选一个（并且检查与 nameserver 没有网络堆叠）
 		for _, addr := range addrs { // 遍历默认网关 ip
-			_, dockergshNetwork, err := net.ParseCIDR(addr)
+			_, dockergshNetwork, err := net.ParseCIDR(addr) // 校验
 			if err != nil {
 				return err
 			}
 
+			// 如果当前 cidr 没有与 nameservers 有 ip 堆叠，那么就选中作为 bridgeIP
+			if err := networkdriver.CheckNameserverOverlaps(nameservers, dockergshNetwork); err == nil {
+				ifaceAddr = addr
+				break
+			} else { // 如果有堆叠，打印日志后，继续检查下一个
+				log.Debugf("%s %s", addr, err)
+			}
 		}
 	}
 
+	// 如果所有默认网关都检查失败，退出
+	if ifaceAddr == "" {
+		return fmt.Errorf("could not find a free IP address range for interface '%s'. Please configure its address manually and run 'docker -b %s'", bridgeIface, bridgeIface)
+	}
+
+	log.Debugf("Creating bridge %s with network %s", bridgeIface, ifaceAddr)
+
+	// 创建网桥
+	if err := createBridgeIface(bridgeIface); err != nil {
+		return err
+	}
 }
 
-// CreateBridgeIface 在主机系统上创建一个名为“ifaceName”的网桥接口，并尝试使用不与主机上任何其他接口冲突的地址来配置它。如果找不到不冲突的地址，则会返回错误。
+// CreateBridgeIface 在主机系统上创建一个名为“ifaceName”的网桥接口，并尝试设置 mac 地址
+func createBridgeIface(name string) error {
+	// 获取 kernel 版本
+	kernelVersion, err := kernel.GetKernelVersion()
+	// 内核版本 > 3.3 时才支持设置网桥的 MAC 地址，其他都不设置 mac
+	setBridgeMacAddr := err == nil && (kernelVersion.Kernel >= 3 && kernelVersion.Major >= 3)
+
+	log.Debugf("setting bridge mac address = %v", setBridgeMacAddr)
+
+	return netlink.CreateBridge(name, setBridgeMacAddr)
+}
