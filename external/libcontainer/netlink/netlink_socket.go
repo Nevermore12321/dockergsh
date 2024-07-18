@@ -160,3 +160,18 @@ outer:
 	}
 	return nil
 }
+
+// 此代码不通过 RTNETLINK 接口与内核通信，它是为了向后兼容旧版 LINUX 内核，该内核附带了旧版 NETLINK 的功能不全的版本
+func getIfSocket() (fd int, err error) {
+	// 按照 AF_INET、AF_PACKET、AF_INET6 顺序获取 套接字，第一个成功的返回
+	for _, socket := range []int{syscall.AF_INET, syscall.AF_PACKET, syscall.AF_INET6} {
+		if fd, err = syscall.Socket(socket, syscall.SOCK_DGRAM, 0); err == nil {
+			break
+		}
+	}
+	if err == nil {
+		return fd, nil
+	}
+
+	return -1, err
+}

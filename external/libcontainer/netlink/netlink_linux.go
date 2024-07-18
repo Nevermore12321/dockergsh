@@ -1,10 +1,15 @@
 package netlink
 
 import (
+	"fmt"
 	"io"
 	"net"
 	"syscall"
 	"unsafe"
+)
+
+const (
+	IFNAMESIZE = 16
 )
 
 // NetworkGetRoutes 返回 ipv4 上所有当前路由子网的 IPNet 数组
@@ -127,4 +132,26 @@ outer: // 遍历所有返回消息
 	}
 
 	return res, nil
+}
+
+// CreateBridge 创建网桥
+func CreateBridge(name string, setMacAddr bool) error {
+	if len(name) >= IFNAMESIZE { // 如果名称长度超出 16 个字符，报错
+		return fmt.Errorf("interface name %s too long", name)
+	}
+
+	s, err := getIfSocket()
+	if err != nil {
+		return err
+	}
+	defer syscall.Close(s)
+
+	// 如果s在任意位置包含NUL字节，则返回（nil，EINVAL）
+	nameBytePtr, err := syscall.BytePtrFromString(name)
+	if err != nil {
+		return err
+	}
+
+	// todo
+
 }
