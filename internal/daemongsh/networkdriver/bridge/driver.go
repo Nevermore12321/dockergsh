@@ -147,10 +147,34 @@ func createBridge(bridgeIp string) error {
 
 	log.Debugf("Creating bridge %s with network %s", bridgeIface, ifaceAddr)
 
-	// 创建网桥
+	// 创建网桥，注意，这里只添加了 mac 地址，还没有设置 ip 地址
 	if err := createBridgeIface(bridgeIface); err != nil {
 		return err
 	}
+
+	// 创建完成后，检查是否存在
+	iface, err := net.InterfaceByName(bridgeIface)
+	if err != nil {
+		return err
+	}
+
+	// 解析网桥 ip 地址
+	ipAddr, ipNet, err := net.ParseCIDR(ifaceAddr)
+	if err != nil {
+		return err
+	}
+
+	// 给网桥设置 ip 地址
+	if err := netlink.NetworkLinkAddIp(iface, ipNet, ipAddr); err != nil {
+		return fmt.Errorf("unable to add private network: %s", err)
+	}
+
+	// 启动网桥设备
+	if err := netlink.NetworkLinkUp(iface); err != nil {
+		return fmt.Errorf("unable to start network bridge: %s", err)
+	}
+
+	return nil
 }
 
 // CreateBridgeIface 在主机系统上创建一个名为“ifaceName”的网桥接口，并尝试设置 mac 地址

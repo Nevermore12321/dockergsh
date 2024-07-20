@@ -206,3 +206,150 @@ func (req *NetlinkRequest) AddData(data NetlinkRequestData) {
 		req.Data = append(req.Data, data)
 	}
 }
+
+// 设置mac地址的请求结构
+type ifreqHwAddr struct {
+	ifrnName   [IFNAMESIZE]byte // 网卡名称
+	ifruHwAddr syscall.RawSockaddr
+}
+
+// IfAddrMsg 是 rtnetlink 消息的一个结构体
+// 用于与操作系统进行低级别的网络接口操作,syscall.IfAddrmsg包括：
+// - Family：地址族（address family），例如 AF_INET 表示 IPv4，AF_INET6 表示 IPv6。
+// - Prefixlen：地址的前缀长度（prefix length），即子网掩码的长度。
+// - Flags：与地址相关的标志（flags），例如是否是永久地址等。
+// - Scope：地址的作用域（scope），表示地址的可达性范围，例如本地、链路、全局等。
+// - Index：网络接口的索引（index），用于标识具体的网络接口。
+type IfAddrMsg struct {
+	syscall.IfAddrmsg
+}
+
+// 实例化 IfAddrMsg 结构，选择地址族
+func newIfAddrMsg(family int) *IfAddrMsg {
+	return &IfAddrMsg{
+		IfAddrmsg: syscall.IfAddrmsg{
+			Family: uint8(family),
+		},
+	}
+}
+
+// ToWireFormat 将 IfAddrMsg 报文转成二进制字节数组，实现 NetlinkRequestData 接口
+func (msg *IfAddrMsg) ToWireFormat() []byte {
+	length := syscall.SizeofIfAddrmsg
+	dataBytes := make([]byte, length)
+	dataBytes[0] = msg.Family
+	dataBytes[1] = msg.Prefixlen
+	dataBytes[2] = msg.Flags
+	dataBytes[3] = msg.Scope
+	native.PutUint32(dataBytes[4:8], msg.Index)
+	return dataBytes
+}
+
+// Len 返回 IfAddrMsg 长度，实现 NetlinkRequestData 接口
+func (msg *IfAddrMsg) Len() int {
+	return syscall.SizeofIfAddrmsg
+}
+
+// RtAttr 在配置网络接口地址时，需要创建多个 RtAttr 属性，并将其添加到 Netlink 消息中发送给内核。内核解析 Netlink 消息并根据属性进行相应的配置操作。
+type RtAttr struct {
+	syscall.RtAttr                      // 包括 Type(属性的类型) 和 Len（属性长度）
+	Data           []byte               // 属性的数据
+	children       []NetlinkRequestData // 子请求
+}
+
+// 实例化 Rtattr
+func newRtAttr(attrType int, data []byte) *RtAttr {
+	return &RtAttr{
+		RtAttr: syscall.RtAttr{
+			Type: uint16(attrType),
+		},
+		Data:     data,
+		children: []NetlinkRequestData{},
+	}
+}
+
+// 按照 RTA_ALIGNTO 字节对齐
+func rtaAlignOf(attrLen int) int {
+	// - RTA_ALIGNTO 是一个常量，用于指定属性对齐的边界值。它通常定义为 4 字节
+	// - 将长度 len 加上 RTA_ALIGNTO - 1，确保总长度大于或等于 RTA_ALIGNTO 的倍数。
+	// - 使用按位与操作 & 和取反操作 ^(syscall.RTA_ALIGNTO - 1)，将总长度调整为 RTA_ALIGNTO 的倍数。
+	return (attrLen + syscall.RTA_ALIGNTO - 1) & ^(syscall.RTA_ALIGNTO - 1)
+}
+
+// Len 返回 RtAttr 长度，实现 NetlinkRequestData 接口
+func (a *RtAttr) Len() int {
+	if len(a.children) == 0 {
+		return (syscall.SizeofRtAttr + len(a.Data))
+	}
+	length := 0
+	// 遍历所有子请求，计算长度
+	for _, child := range a.children {
+		length += child.Len()
+	}
+
+	// 再加上 syscall.RtAttr 长度 和 Data 的长度
+	length += syscall.SizeofRtAttr
+	length += len(a.Data)
+	// 按照 对齐
+	return rtaAlignOf(length)
+}
+
+// ToWireFormat 将 IfAddrMsg 报文转成二进制字节数组，实现 NetlinkRequestData 接口
+func (a *RtAttr) ToWireFormat() []byte {
+	length := a.Len()
+	buf := make([]byte, rtaAlignOf(length))
+
+	if a.Data != nil { // 如果有数据
+		copy(buf[4:], a.Data) // 从第四位开始都是属性数据
+	} else { // 如果没有数据，计算子请求数据
+		// 子请求的二进制数组
+		next := 4
+		for _, child := range a.children {
+			childBuf := child.ToWireFormat()
+			copy(buf[next:], childBuf)
+			next += rtaAlignOf(len(childBuf))
+		}
+	}
+
+	// 长度写入 0,1 位置
+	if l := uint16(length); l > 0 {
+		native.PutUint16(buf[0:2], l)
+	}
+	native.PutUint16(buf[2:4], a.Type)
+	return buf
+}
+
+// IfInfoMsg RTM_NEWLINK 创建/删除/修改 网卡设备的消息结构
+// - Family (uint8): 地址族，通常是 AF_INET (IPv4) 或 AF_INET6 (IPv6)，也可以是其他值来表示不同类型的网络。
+// - Type (uint16): 接口类型，表示网络接口的类型（例如，ARPHRD_ETHER 表示以太网接口）。
+// - Index (int32): 接口索引，这是系统分配的唯一标识符，用于标识具体的网络接口。
+// - Flags (uint32): 接口标志，表示接口的状态或特性（例如，IFF_UP 表示接口已启动，IFF_RUNNING 表示接口正在运行）。
+// - Change (uint32): 改变掩码，用于指示哪些标志需要更改。
+type IfInfoMsg struct {
+	syscall.IfInfomsg
+}
+
+// 实例化 IfInfomsg 结构体M
+func newIfInfoMsg(family int) *IfInfomsg {
+	return &IfInfomsg{
+		IfInfomsg: syscall.IfInfomsg{
+			Family: uint8(family),
+		},
+	}
+}
+
+func (msg *IfInfoMsg) Len() int {
+	return syscall.SizeofIfInfomsg
+}
+
+func (msg *IfInfoMsg) ToWireFormat() []byte {
+	length := syscall.SizeofIfInfomsg
+	dataBytes := make([]byte, length)
+	dataBytes[0] = msg.Family
+	dataBytes[1] = 0 // 填充字节 X__ifi_pad 字段
+	native.PutUint16(dataBytes[2:4], msg.Type)
+	native.PutUint32(dataBytes[4:8], uint32(msg.Index))
+	native.PutUint32(dataBytes[8:12], msg.Flags)
+	native.PutUint32(dataBytes[12:16], msg.Change)
+	return dataBytes
+}
