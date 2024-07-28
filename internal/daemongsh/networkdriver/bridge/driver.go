@@ -5,10 +5,12 @@ import (
 	"github.com/Nevermore12321/dockergsh/external/libcontainer/netlink"
 	"github.com/Nevermore12321/dockergsh/internal/daemongsh/networkdriver"
 	"github.com/Nevermore12321/dockergsh/internal/engine"
+	"github.com/Nevermore12321/dockergsh/pkg/iptables"
 	"github.com/Nevermore12321/dockergsh/pkg/networkfs/resolvconf"
 	"github.com/Nevermore12321/dockergsh/pkg/parse/kernel"
 	log "github.com/sirupsen/logrus"
 	"net"
+	"os"
 )
 
 const (
@@ -103,6 +105,24 @@ func InitDriver(job *engine.Job) engine.Status {
 		}
 	}
 
+	// 创建完网桥之后，Docker Daemon为Docker容器以及宿主机配置iptables规则
+	// 为Docker容器之间的link操作提供iptables防火墙支持
+	if enableIptables {
+		if err := setupIptables(addr, icc); err != nil {
+			return job.Error(err)
+		}
+	}
+
+	// 启用系统数据包转发功能，将 /proc/sys/net/ipv4/ip_forward 置 1
+	if ipForward {
+		// enable ipv4 forwarding
+		if err := os.WriteFile("/proc/sys/net/ipv4/ip_forward", []byte{'1', '\n'}, 0644); err != nil {
+			job.Logf("WARNING: unable to enable IPv4 forwarding: %s\n", err)
+		}
+
+	}
+
+	// todo 创建DOCKER链
 	return 0
 }
 
@@ -165,7 +185,7 @@ func createBridge(bridgeIp string) error {
 	}
 
 	// 给网桥设置 ip 地址
-	if err := netlink.NetworkLinkAddIp(iface, ipNet, ipAddr); err != nil {
+	if err := netlink.NetworkLinkAddIp(iface, ipAddr, ipNet); err != nil {
 		return fmt.Errorf("unable to add private network: %s", err)
 	}
 
@@ -187,4 +207,80 @@ func createBridgeIface(name string) error {
 	log.Debugf("setting bridge mac address = %v", setBridgeMacAddr)
 
 	return netlink.CreateBridge(name, setBridgeMacAddr)
+}
+
+// 设置 iptables 规则
+// addr - 地址为Docker网桥的网络地址
+// icc - 为true，即允许Docker容器间互相访问
+func setupIptables(addr net.Addr, icc bool) error {
+	// 1. 使用iptables工具开启新建网桥的NAT功能
+	// 全部命令为： iptables -I POSTROUTING -t nat -s [dockergsh0_ip] ！ -o dockergsh0 -j MASQUERADE
+	natArgs := []string{"POSTROUTING", "-t", "nat", "-s", addr.String(), "!", "-o", bridgeIface, "-j", "MASQUERADE"}
+	if !iptables.Exists(natArgs...) { // 如果iptables规则不存在，则添加
+		output, err := iptables.Raw(append([]string{"-I"}, natArgs...)...)
+		if err != nil {
+			return fmt.Errorf("unable to enable network bridge NAT: %s", err)
+		} else if len(output) != 0 {
+			return fmt.Errorf("error iptables postrouting: %s", output)
+		}
+	}
+
+	// 2. 通过icc参数，决定是否允许Docker容器间的通信，并制定相应iptables的Forward链
+	// 即：iptables -I FORWARD -i dockergsh0 -o dockergsh0 -j ACCEPT
+	var (
+		args       = []string{"FORWARD", "-i", bridgeIface, "-o", "output", "-j"} // FORWARD 链，-j 后根 accept 还是 drop
+		acceptArgs = append(args, "ACCEPT")
+		dropArgs   = append(args, "DROP")
+	)
+
+	if !icc { // 不允许容器间通信
+		// 先删除 ACCEPT 规则
+		iptables.Raw(append([]string{"-D"}, acceptArgs...)...)
+
+		// 添加 drop 规则
+		if !iptables.Exists(dropArgs...) {
+			log.Debugf("Disable inter-container communication")
+			if output, err := iptables.Raw(append([]string{"-I"}, dropArgs...)...); err != nil {
+				return fmt.Errorf("unable to prevent intercontainer communication: %s", err)
+			} else if len(output) != 0 {
+				return fmt.Errorf("error disabling intercontainer communication: %s", output)
+			}
+		}
+	} else { // 允许容器间通信
+		// 县删除 drop 规则
+		iptables.Raw(append([]string{"-D"}, dropArgs...)...)
+
+		// 添加 accept 规则
+		if !iptables.Exists(acceptArgs...) {
+			log.Debugf("Enable inter-container communication")
+			if output, err := iptables.Raw(append([]string{"-I"}, acceptArgs...)...); err != nil {
+				return fmt.Errorf("unable to allow intercontainer communication: %s", err)
+			} else if len(output) != 0 {
+				return fmt.Errorf("error enabling intercontainer communication: %s", output)
+			}
+		}
+	}
+
+	// 3. 允许接受从容器发出，且目标地址不是容器的数据包，也就是允许所有从docker0发出且不是继续发向docker0的数据包
+	// 即命令：iptables -I FORWARD -i docker0 ! -o docker0 -j ACCEPT
+	outgoingArgs := []string{"FORWARD", "-i", bridgeIface, "!", "-o", bridgeIface, "-j", "ACCEPT"}
+	if !iptables.Exists(outgoingArgs...) {
+		if output, err := iptables.Raw(append([]string{"-I"}, outgoingArgs...)...); err != nil {
+			return fmt.Errorf("unable to allow outgoing packets: %s", err)
+		} else if len(output) != 0 {
+			return fmt.Errorf("error iptables allow outgoing: %s", output)
+		}
+	}
+
+	// 4. 允许接受从容器发出，且目标地址不是容器的数据包。换言之，允许所有从docker0发出且不是继续发向docker0的数据包
+	// 即命令：iptables -I FORWARD -o docker0 -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
+	existingArgs := []string{"FORWARD", "-o", bridgeIface, "-m", "conntrack", "--ctstate", "RELATED,ESTABLISHED", "-j", "ACCEPT"}
+	if !iptables.Exists(existingArgs...) {
+		if output, err := iptables.Raw(append([]string{"-I"}, existingArgs...)...); err != nil {
+			return fmt.Errorf("unable to allow incoming packets: %s", err)
+		} else if len(output) != 0 {
+			return fmt.Errorf("error iptables allow incoming: %s", output)
+		}
+	}
+	return nil
 }
