@@ -122,7 +122,21 @@ func InitDriver(job *engine.Job) engine.Status {
 
 	}
 
-	// todo 创建DOCKER链
+	// 创建DOCKERGSH链，在创建Docker容器时实现容器与宿主机的端口映射
+	// 每次启动前，先把之前的 iptables 清除
+	if err := iptables.RemoveExistingChain("DOCKERGSH"); err != nil {
+		return job.Error(err)
+	}
+	// 创建新 chain
+	if enableIptables {
+		chain, err := iptables.NewChain("DOCKERGSH", bridgeIface)
+		if err != nil {
+			return job.Error(err)
+		}
+		// todo 添加 端口映射的 iptables 规则
+		portmapper.SetIptablesChain(chain)
+	}
+
 	return 0
 }
 
