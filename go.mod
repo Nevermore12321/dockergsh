@@ -3,6 +3,7 @@ module github.com/Nevermore12321/dockergsh
 go 1.21
 
 require (
+	github.com/mattn/go-sqlite3 v1.14.22
 	github.com/sirupsen/logrus v1.8.1
 	github.com/tchap/go-patricia/v2 v2.3.1
 	github.com/urfave/cli/v2 v2.11.0

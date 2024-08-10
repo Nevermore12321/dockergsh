@@ -39,7 +39,7 @@ type Engine struct {
 	lck        sync.RWMutex       // 读写互斥锁，用于 shutdown
 	shutdown   bool               // 是否已经执行了关闭
 	onShutdown []func()           // 如果需要关闭的逻辑处理，在这里定义 handler
-	// todo hack
+	hack       Hack               // 临时数据
 }
 
 // Register engine 注册一个 Job，其实就是在 engine 的 handlers 中加一个 job

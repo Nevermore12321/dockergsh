@@ -6,6 +6,7 @@ import (
 	"github.com/Nevermore12321/dockergsh/internal/engine"
 	"github.com/Nevermore12321/dockergsh/internal/graph"
 	"github.com/Nevermore12321/dockergsh/internal/utils"
+	"github.com/Nevermore12321/dockergsh/pkg/graphdb"
 	"github.com/Nevermore12321/dockergsh/pkg/parse/kernel"
 	log "github.com/sirupsen/logrus"
 	"os"
@@ -218,6 +219,17 @@ func NewDaemongshFromDirectory(config *Config, eng *engine.Engine) (*Daemongsh, 
 			return nil, err
 		}
 	}
+
+	/* -------------- */
+	// 6. 创建graphdb并初始化
+	// graphdb是一个构建在SQLite之上的图形数据库，通常用来记录节点命名以及节点之间的关联
+	// Daemon正是使用graphdb来记录容器间的关联信息(docker link)
+	graphdbPath := path.Join(config.Root, "linkgraph.db")
+	graphdbConn, err := graphdb.NewSqliteConn(graphdbPath)
+	if err != nil {
+		return nil, err
+	}
+
 	return nil, nil
 }
 

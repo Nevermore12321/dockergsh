@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/Nevermore12321/dockergsh/external/libcontainer/netlink"
 	"github.com/Nevermore12321/dockergsh/internal/daemongsh/networkdriver"
+	"github.com/Nevermore12321/dockergsh/internal/daemongsh/networkdriver/portmapper"
 	"github.com/Nevermore12321/dockergsh/internal/engine"
 	"github.com/Nevermore12321/dockergsh/pkg/iptables"
 	"github.com/Nevermore12321/dockergsh/pkg/networkfs/resolvconf"
@@ -23,6 +24,9 @@ var (
 
 	// dockergsh -p 端口映射时，默认的宿主机的绑定 ip，默认 0.0.0.0
 	defaultBindingIp = net.ParseIP("0.0.0.0")
+
+	// 网桥网卡信息
+	bridgeNetwork *net.IPNet
 
 	// 可选的默认网关 ip 地址 cidr
 	addrs = []string{
@@ -133,10 +137,51 @@ func InitDriver(job *engine.Job) engine.Status {
 		if err != nil {
 			return job.Error(err)
 		}
-		// todo 添加 端口映射的 iptables 规则
+		// 添加 端口映射的 iptables 规则
 		portmapper.SetIptablesChain(chain)
 	}
 
+	// 把创建好的网桥写入全局变量 bridgeNetwork
+	bridgeNetwork = network
+
+	job.Eng.Hack_SetGlobalVar("httpapi.bridgeIP", bridgeNetwork.IP)
+
+	// 向Engine中注册方法
+	//	- allocate_interface：为Docker容器分配专属网络接口，分配容器网段的IP地址；
+	//	- realease_interface：释放Docker容器占用的网络接口资源；
+	//	- allocate_port：为Docker容器分配一个端口；
+	//	- link：实现Docker容器间的连接操作
+	for name, f := range map[string]engine.Handler{
+		"allocate_interface": Allocate,
+		"release_interface":  Release,
+		"allocate_port":      AllocatePort,
+		"link":               LinkContainers,
+	} {
+		if err := job.Eng.Register(name, f); err != nil {
+			return job.Error(err)
+		}
+	}
+
+	return engine.StatusOk
+}
+
+// todo Allocate 为Docker容器分配专属网络接口，分配容器网段的IP地址；
+func Allocate(job *engine.Job) engine.Status {
+	return 0
+}
+
+// todo Release 释放Docker容器占用的网络接口资源；
+func Release(job *engine.Job) engine.Status {
+	return 0
+}
+
+// todo AllocatePort 为Docker容器分配一个端口
+func AllocatePort(job *engine.Job) engine.Status {
+	return 0
+}
+
+// todo LinkContainers 实现Docker容器间的连接操作
+func LinkContainers(job *engine.Job) engine.Status {
 	return 0
 }
 
