@@ -52,3 +52,7 @@ func NewDatabase(conn *sql.DB, initDatabase bool) (*Database, error) {
 
 	return database, nil
 }
+
+func (db *Database) Close() error {
+	return db.conn.Close()
+}

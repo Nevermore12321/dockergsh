@@ -8,6 +8,7 @@ import (
 	"github.com/Nevermore12321/dockergsh/internal/utils"
 	"github.com/Nevermore12321/dockergsh/pkg/graphdb"
 	"github.com/Nevermore12321/dockergsh/pkg/parse/kernel"
+	utilsPackage "github.com/Nevermore12321/dockergsh/utils"
 	log "github.com/sirupsen/logrus"
 	"os"
 	"path"
@@ -224,10 +225,32 @@ func NewDaemongshFromDirectory(config *Config, eng *engine.Engine) (*Daemongsh, 
 	// 6. 创建graphdb并初始化
 	// graphdb是一个构建在SQLite之上的图形数据库，通常用来记录节点命名以及节点之间的关联
 	// Daemon正是使用graphdb来记录容器间的关联信息(docker link)
+	// graphdb 的目录为 /var/lib/dockergsh/linkgraph.db
 	graphdbPath := path.Join(config.Root, "linkgraph.db")
 	graphdbConn, err := graphdb.NewSqliteConn(graphdbPath)
 	if err != nil {
 		return nil, err
+	}
+
+	// 7. 寻找 dockergshinit 的二进制文件
+	// 当我们找到合适的 dockergshinit 二进制文件（即使它是本地二进制文件）时，将其复制到 localCopy 的 config.Root 中以供将来使用（这样原始文件就可以消失而不会出现问题，例如在软件包升级期间）
+	localPath := path.Join(config.Root, "init", fmt.Sprint("dockergsh-%s", utils.VERSION))
+	sysInitPath := utilsPackage.DockergshInitPath(localPath)
+	if sysInitPath == "" {
+		return nil, fmt.Errorf("could not locate dockergshinit: This usually means docker was built incorrectly")
+	}
+	if sysInitPath != localPath {
+		if err := os.Mkdir(path.Dir(localPath), 0700); err != nil && os.IsExist(err) {
+			return nil, err
+		}
+		// 将 dockergshinit 文件拷贝 到 localPath 下
+		if _, err := utilsPackage.CopyFile(sysInitPath, localPath); err != nil {
+			return nil, err
+		}
+		if err := os.Chmod(localPath, 0700); err != nil {
+			return nil, err
+		}
+		sysInitPath = localPath
 	}
 
 	return nil, nil
