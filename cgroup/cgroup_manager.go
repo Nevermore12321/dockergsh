@@ -9,13 +9,13 @@ import (
 
 /*
 把所有不同的 subsystem 中的 cgroup 管理起来，并与容器建立关系
- */
+*/
 type CgroupManager struct {
-	Path 		string				//  cgroup在hierarchy中的路径 相当于创建的cgroup目录相对于root cgroup目录的路径
-	Resource 	*subsystem.ResourceConfig	// 资源配置
+	Path     string                    //  cgroup在hierarchy中的路径 相当于创建的cgroup目录相对于root cgroup目录的路径
+	Resource *subsystem.ResourceConfig // 资源配置
 }
 
-//  工厂函数
+// 工厂函数
 func NewCgroupManager(path string) *CgroupManager {
 	return &CgroupManager{
 		Path: path,
@@ -52,7 +52,6 @@ func (cm *CgroupManager) DestroyV1() error {
 	}
 	return nil
 }
-
 
 // 将进程加入到 cgroup v2 的每个 cgroup 中
 func (cm *CgroupManager) ApplyV2(pid int) error {

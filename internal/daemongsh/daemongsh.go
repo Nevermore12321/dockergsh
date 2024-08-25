@@ -2,12 +2,14 @@ package daemongsh
 
 import (
 	"fmt"
+	"github.com/Nevermore12321/dockergsh/internal/daemongsh/execdriver/execdrivers"
 	"github.com/Nevermore12321/dockergsh/internal/daemongsh/graphdriver"
 	"github.com/Nevermore12321/dockergsh/internal/engine"
 	"github.com/Nevermore12321/dockergsh/internal/graph"
 	"github.com/Nevermore12321/dockergsh/internal/utils"
 	"github.com/Nevermore12321/dockergsh/pkg/graphdb"
 	"github.com/Nevermore12321/dockergsh/pkg/parse/kernel"
+	"github.com/Nevermore12321/dockergsh/pkg/sysinfo"
 	utilsPackage "github.com/Nevermore12321/dockergsh/utils"
 	log "github.com/sirupsen/logrus"
 	"os"
@@ -234,6 +236,7 @@ func NewDaemongshFromDirectory(config *Config, eng *engine.Engine) (*Daemongsh, 
 
 	// 7. 寻找 dockergshinit 的二进制文件
 	// 当我们找到合适的 dockergshinit 二进制文件（即使它是本地二进制文件）时，将其复制到 localCopy 的 config.Root 中以供将来使用（这样原始文件就可以消失而不会出现问题，例如在软件包升级期间）
+	// 路径为/var/lib/dockergsh/init/dockergshinit-[VERSION]
 	localPath := path.Join(config.Root, "init", fmt.Sprint("dockergsh-%s", utils.VERSION))
 	sysInitPath := utilsPackage.DockergshInitPath(localPath)
 	if sysInitPath == "" {
@@ -251,6 +254,14 @@ func NewDaemongshFromDirectory(config *Config, eng *engine.Engine) (*Daemongsh, 
 			return nil, err
 		}
 		sysInitPath = localPath
+	}
+
+	// 8. 创建 execdriver
+	// execdriver 是 Dockergsh 中用来执行容器任务的驱动
+	sysInfo := sysinfo.New(false)
+	ed, err := execdrivers.NewDriver(config.ExecDriver, config.Root, sysInitPath, sysInfo)
+	if err != nil {
+		return nil, err
 	}
 
 	return nil, nil
