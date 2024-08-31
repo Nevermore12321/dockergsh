@@ -27,7 +27,7 @@ func getLines(input []byte, commentMaker []byte) [][]byte {
 		var commentIndex = bytes.Index(currentLine, commentMaker)
 		if commentIndex == -1 { // 当前行不是注释
 			output = append(output, currentLine)
-		} else { // 当前行是注释，则去掉注释标识符
+		} else { // 当前行是注释，则去掉注释标识符后的内容
 			output = append(output, currentLine[:commentIndex])
 		}
 	}

@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"bytes"
 	"crypto/sha1"
 	"encoding/hex"
 	"github.com/Nevermore12321/dockergsh/internal/utils"
@@ -137,4 +138,39 @@ func CopyFile(src, dst string) (int64, error) {
 	defer dstFile.Close()
 
 	return io.Copy(dstFile, srcFile)
+}
+
+// GetLines 从 input 内容中去掉 commentMarker 注释内容
+func GetLines(input []byte, commentMarker []byte) [][]byte {
+	lines := bytes.Split(input, []byte("\n")) // 按照换行符分割
+	var output [][]byte
+	for _, currentLine := range lines { // 遍历每一行数据
+		var commentIndex = bytes.Index(currentLine, commentMarker) // 寻找注释符号
+		if commentIndex == -1 {                                    // 如果此行不是注释，添加到输出
+			output = append(output, currentLine)
+		} else { // 如果此行有注释，则去掉注释标识符后的内容
+			output = append(output, currentLine[:commentIndex])
+		}
+	}
+	return output
+}
+
+// CheckLocalDNS 会查看 /etc/resolv.conf，如果第一条生效的 那么nameserver是 127 的本地dns，则返回true
+func CheckLocalDNS(resolvConf []byte) bool {
+	// 循环读取 /etc/resolv.conf 文件中的每一行内容（去掉注释）
+	for _, line := range GetLines(resolvConf, []byte("#")) {
+		if !bytes.Contains(line, []byte("nameserver")) { // 如果内容没有 nameserver 字样，跳过
+			continue
+		}
+		for _, ip := range [][]byte{ // 如果包括了 127.0.0.1 或者 127.0.1.1 的本地 dns 地址，返回 true
+			[]byte("127.0.0.1"),
+			[]byte("127.0.1.1"),
+		} {
+			if bytes.Contains(line, ip) {
+				return true
+			}
+		}
+		return false
+	}
+	return true
 }

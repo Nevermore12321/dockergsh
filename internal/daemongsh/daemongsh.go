@@ -2,26 +2,82 @@ package daemongsh
 
 import (
 	"fmt"
+	"github.com/Nevermore12321/dockergsh/internal/daemongsh/execdriver"
 	"github.com/Nevermore12321/dockergsh/internal/daemongsh/execdriver/execdrivers"
 	"github.com/Nevermore12321/dockergsh/internal/daemongsh/graphdriver"
 	"github.com/Nevermore12321/dockergsh/internal/engine"
 	"github.com/Nevermore12321/dockergsh/internal/graph"
 	"github.com/Nevermore12321/dockergsh/internal/utils"
 	"github.com/Nevermore12321/dockergsh/pkg/graphdb"
+	"github.com/Nevermore12321/dockergsh/pkg/networkfs/resolvconf"
 	"github.com/Nevermore12321/dockergsh/pkg/parse/kernel"
 	"github.com/Nevermore12321/dockergsh/pkg/sysinfo"
+	"github.com/Nevermore12321/dockergsh/pkg/truncindex"
 	utilsPackage "github.com/Nevermore12321/dockergsh/utils"
 	log "github.com/sirupsen/logrus"
 	"os"
 	"path"
 	"runtime"
+	"sync"
 )
+
+var (
+	DefaultDns = []string{"8.8.8.8", "8.8.4.4"}
+)
+
+// 全局所有容器信息
+type contStore struct {
+	s          map[string]*Container // 所有容器全局信息，id-container 映射关系
+	sync.Mutex                       // 全局变量修改锁
+}
+
+func (c *contStore) Add(id string, cont *Container) {
+	c.Lock()
+	defer c.Unlock()
+	c.s[id] = cont
+}
+
+func (c *contStore) Get(id string) *Container {
+	c.Lock()
+	defer c.Unlock()
+	res := c.s[id]
+	return res
+}
+
+func (c *contStore) Delete(id string) {
+	c.Lock()
+	defer c.Unlock()
+	delete(c.s, id)
+}
+
+func (c *contStore) List() []*Container {
+	containers := new(History)
+	c.Lock()
+	for _, container := range c.s { // 将所有容器放入 History 对象中
+		containers.Add(container)
+	}
+	c.Unlock()
+	containers.Sort() // 按照时间排序
+	return *containers
+}
 
 // Daemongsh 在 Dockergsh架构中 Daemongsh 支撑着整个后台进程的运行，
 // 同时也统一化管理着 Docker 架构中 graph、graphdriver、execdriver、volumes、Docker 容器等众多资源。
 // 可以说，Dockergsh Daemongsh复杂的运作均由daemongsh对象来调度
-// todo add elements
 type Daemongsh struct {
+	repository     string                 // 存储所有docker容器信息的路径，默认为：/var/lib/dockergsh/containers
+	sysInitPath    string                 // 系统dockerinit二进制文件所在的路径
+	containers     *contStore             // 用户存储docker容器信息的对象
+	graph          *graph.Graph           // 存储docker镜像的graph对象
+	repositories   *graph.TagStore        // 存储本级所有docker镜像repo信息的对象
+	idIndex        *truncindex.TruncIndex // 镜像的短ID，通过简短有效的字符串前缀定位唯一的镜像
+	sysInfo        *sysinfo.SysInfo       // 系统功能信息
+	volumes        *graph.Graph           // 管理宿主机上 volume 内容的 graphdriver，默认为 vfs
+	eng            *engine.Engine         // docker 执行引擎 Engine 类型
+	config         *Config                // config.go 文件中的配置信息，以及执行后产生的配置 DisableNetwork
+	containerGraph *graphdb.Database      // 存储docker镜像关系的 graphdb
+	driver         graphdriver.Driver     // 管理docker镜像的驱动 graphdriver，默认为 aufs
+	execDriver     execdriver.Driver      // docker daemon 的 exec 驱动，默认为 native
 }
 
 // NewDaemongsh 创建 Daemongsh 对象实例
@@ -264,6 +320,36 @@ func NewDaemongshFromDirectory(config *Config, eng *engine.Engine) (*Daemongsh, 
 		return nil, err
 	}
 
+	// 9. 创建 daemongsh 实例
+	// 对象实例daemon涉及的内容极多，比如：
+	// - 对于Docker镜像的存储可以通过graph来管理
+	// - 所有Docker容器的元数据信息都保存在containers对象中
+	// - 整个Docker Daemon的任务执行位于eng属性中
+	// - 等等
+	daemongsh := &Daemongsh{
+		repository:     daemonContainerRepo,
+		sysInitPath:    sysInitPath,
+		containers:     &contStore{s: make(map[string]*Container)},
+		graph:          g,
+		repositories:   repositories,
+		idIndex:        truncindex.NewTruncIndex([]string{}),
+		sysInfo:        sysInfo,
+		volumes:        volumeGraph,
+		eng:            eng,
+		config:         config,
+		containerGraph: graphdbConn,
+		driver:         driver,
+		execDriver:     ed,
+	}
+
+	// 10. 检测DNS配置
+	// 检测Docker运行环境中DNS的配置
+	if err := daemongsh.checkLocalDNS(); err != nil {
+		return nil, err
+	}
+
+	// 11. 启动时，加载已有的容器
+	// todo
 	return nil, nil
 }
 
@@ -303,6 +389,22 @@ func (daemon *Daemongsh) Install(eng *engine.Engine) error {
 		}
 	}
 	// todo
+	return nil
+}
+
+// checkLocalDNS 检查本地 DNS 配置 /etc/resolv.conf 中是否有本地 127.0.0.1 的 dns
+func (daemon *Daemongsh) checkLocalDNS() error {
+	resolveConf, err := resolvconf.Get()
+	if err != nil {
+		return err
+	}
+
+	// 若宿主机上DNS文件resolv.conf中有127.0.0.1，而Docker容器在自身内部不能使用该地址，只能使用默认 dns 地址
+	// 默认 dns 为 8.8.8.8，8.8.4.4
+	if len(resolveConf) == 0 && utilsPackage.CheckLocalDNS(resolveConf) {
+		log.Infof("Local (127.0.0.1) DNS resolver found in resolv.conf and containers can't use it. Using default external servers : %v", DefaultDns)
+		daemon.config.Dns = DefaultDns
+	}
 	return nil
 }
 
