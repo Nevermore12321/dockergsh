@@ -17,6 +17,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"os"
 	"path"
+	"path/filepath"
 	"runtime"
 	"sync"
 )
@@ -349,7 +350,12 @@ func NewDaemongshFromDirectory(config *Config, eng *engine.Engine) (*Daemongsh, 
 	}
 
 	// 11. 启动时，加载已有的容器
-	// todo
+	// 在Docker Daemon重启时，有可能有遗留的容器，这部分容器存储在 daemon.repository 中（路径在 /var/lib/dockergsh/containers）
+	// todo complete restore
+	if err := daemongsh.restore(); err != nil {
+		return nil, err
+	}
+
 	return nil, nil
 }
 
@@ -406,6 +412,74 @@ func (daemon *Daemongsh) checkLocalDNS() error {
 		daemon.config.Dns = DefaultDns
 	}
 	return nil
+}
+
+// restore docker daemon 容器时，加载之前已经运行的容器
+func (daemon *Daemongsh) restore() error {
+	var (
+		DEBUG         = os.Getenv(utils.DockergshDebug) != "" || os.Getenv("TEST") != ""
+		containers    = make(map[string]*Container)
+		currentDriver = daemon.driver.String() // 当前 docker daemon 使用的 graph driver
+	)
+
+	if !DEBUG {
+		log.Infof("Loading containers: ")
+	}
+
+	// 读取 daemongsh.repository 目录，即 /var/lib/dockergsh/containers
+	//
+	dir, err := os.ReadDir(daemon.repository)
+	if err != nil {
+		return err
+	}
+
+	// 遍历目录下所有文件夹，文件夹名就是容器的ID
+	for _, file := range dir {
+		containerID := file.Name()
+		container, err := daemon.load(containerID) // 加载容器文件夹下的容器信息
+		if !DEBUG {
+			fmt.Print(".")
+		}
+		if err != nil {
+			log.Errorf("Failed to load container %v: %v", containerID, err)
+			continue
+		}
+
+		// 如果容器的 graph driver 不支持图形当前使用的 graph 驱动程序，则忽略该容器
+		if (container.Driver == "" && currentDriver == "aufs") || container.Driver == currentDriver {
+			log.Debugf("Loaded container %v", container.ID)
+			containers[container.ID] = container
+		} else { // 不支持
+			log.Debugf("Cannot load container %s because it was created with another graph driver.", container.ID)
+		}
+	}
+
+	// todo
+}
+
+// 拼出当前id容器的根目录，即 /var/lib/dockergsh/containers/[CONTAINER_ID]
+func (daemon *Daemongsh) containerRoot(containerID string) string {
+	return filepath.Join(daemon.repository, containerID)
+}
+
+// load 根据容器 ID 加载容器信息
+func (daemon *Daemongsh) load(containerID string) (*Container, error) {
+	// 初始化一个空的容器
+	container := &Container{
+		Root:  daemon.containerRoot(containerID),
+		State: NewState(),
+	}
+
+	// 从配置文件Container.Root中加载容器的相关设置
+	if err := container.LoadFromDisk(); err != nil {
+		return nil, err
+	}
+
+	if container.ID != containerID {
+		return container, fmt.Errorf("container %s is stored at %s", container.ID, containerID)
+	}
+
+	return container, nil
 }
 
 // 检测内核的版本以及主机处理器类型
