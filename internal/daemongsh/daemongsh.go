@@ -427,7 +427,6 @@ func (daemon *Daemongsh) restore() error {
 	}
 
 	// 读取 daemongsh.repository 目录，即 /var/lib/dockergsh/containers
-	//
 	dir, err := os.ReadDir(daemon.repository)
 	if err != nil {
 		return err
@@ -445,7 +444,7 @@ func (daemon *Daemongsh) restore() error {
 			continue
 		}
 
-		// 如果容器的 graph driver 不支持图形当前使用的 graph 驱动程序，则忽略该容器
+		// 如果容器的 graph driver 不支持当前使用的 graph 驱动程序，则忽略该容器
 		if (container.Driver == "" && currentDriver == "aufs") || container.Driver == currentDriver {
 			log.Debugf("Loaded container %v", container.ID)
 			containers[container.ID] = container
@@ -455,6 +454,9 @@ func (daemon *Daemongsh) restore() error {
 	}
 
 	// todo
+	registeredContainers := []*Container{}
+	daemon.containerGraph
+
 }
 
 // 拼出当前id容器的根目录，即 /var/lib/dockergsh/containers/[CONTAINER_ID]
