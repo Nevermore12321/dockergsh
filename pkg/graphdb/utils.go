@@ -29,3 +29,13 @@ func splitPath(fullPath string) (string, string) {
 func split(p string) []string {
 	return strings.Split(p, "/")
 }
+
+// 返回给定路径中的深度或数量
+func pathDepth(p string) int {
+	paths := split(p)
+	if len(paths) == 2 && paths[1] == "" { // 如果第一个是空
+		return 1
+	}
+
+	return len(paths)
+}

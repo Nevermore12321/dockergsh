@@ -453,9 +453,33 @@ func (daemon *Daemongsh) restore() error {
 		}
 	}
 
-	// todo
+	// 从 / 路径开始查找
 	registeredContainers := []*Container{}
-	daemon.containerGraph
+	if entities := daemon.containerGraph.List("/", -1); entities != nil {
+		for _, p := range entities.Paths() { // 根据深度的大小顺序遍历所有 entity
+			if !DEBUG {
+				fmt.Print(".")
+			}
+
+			e := entities[p]
+			// 根据 entity id 找到真正的容器信息
+			if container, ok := containers[e.Id()]; ok {
+				// 为容器生成一个随机的名称
+				container.Name, err = daemon.generateNewName(container.ID)
+				if err != nil {
+					log.Debugf("Setting default id - %s", err)
+				}
+				// 加载容器
+				if err := daemon.register(container, false); err != nil {
+					log.Debugf("Failed to register container %s: %s", container.ID, err)
+				}
+				registeredContainers = append(registeredContainers, container)
+				// 从 containers 列表中删除，防止后续操作自动生成新的名字
+				delete(containers, e.Id())
+			}
+
+		}
+	}
 
 }
 

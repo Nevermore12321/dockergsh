@@ -17,6 +17,7 @@ type Container struct {
 	Created    time.Time // 容器的创建时间
 
 	ID     string // 容器 ID
+	Name   string // 容器名称
 	State  *State // 容器状态
 	Driver string // 容器使用的镜像 graph driver 类型
 }

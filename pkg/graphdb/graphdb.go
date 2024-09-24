@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	log "github.com/sirupsen/logrus"
+	"path/filepath"
 	"sync"
 )
 
@@ -63,7 +64,7 @@ type Entity struct {
 // Edge 不同实体间的关联关系
 // edge 表主要用于定义这些实体之间的关系。在 Docker 的分层文件系统中，不同的镜像层（实体）会彼此依赖，edge 表用来维护这些依赖关系。
 type Edge struct {
-	Entity   string // 实体 id
+	EntityId string // 实体 id
 	Name     string // 实体 名称
 	ParentId string // 实体的父级
 }
@@ -108,7 +109,7 @@ func (db *Database) get(name string) (*Entity, error) {
 		// 从根开始，一直往下层寻找
 		next := db.child(entity, p)
 		if next == nil { // 没找到
-			return nil, fmt.Errorf("Cannot find child for %s", name)
+			return nil, fmt.Errorf("cannot find child for %s", name)
 		}
 
 		entity = next
@@ -201,4 +202,122 @@ func (db *Database) setEdge(parentPath, name string, e *Entity) error {
 		return err
 	}
 	return nil
+}
+
+// Exists 判断名为 name 的 entity 存不存在
+func (db *Database) Exists(name string) bool {
+	db.mux.RLock()
+	defer db.mux.RUnlock()
+
+	e, err := db.get(name)
+	if err != nil {
+		return false
+	}
+	return e != nil
+}
+
+type WalkMeta struct {
+	Parent   *Entity // 父 Entity
+	Entity   *Entity // 当前 Entity
+	FullPath string  // 完成的路径，通过组合父实体的路径和当前边的名称来构建，便于追踪实体在树形结构中的位置。
+	Edge     *Edge   // 当前 Entity 所有关联的 Entity，从父实体到当前实体的连接信息
+}
+
+// 查找所有 e 下所有 子 entity，查找深度是 depth
+func (db *Database) children(e *Entity, name string, depth int, entities []WalkMeta) ([]WalkMeta, error) {
+	// 如果当前 entity 不存在，直接返回
+	if e == nil {
+		return entities, nil
+	}
+
+	// 根据当前实体 entity id，查找所有 子 entity
+	rows, err := db.conn.Query("SELECT entity_id, name FROM edge where parent_id = ?", e.id)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	// 遍历每一个 子 entity，构建出子 Entity 实例
+	for rows.Next() {
+		var entityId, entityName string
+		if err := rows.Scan(&entityId, &entityName); err != nil { // 获取下一个子entity
+			return nil, err
+		}
+		// 构建 子Entity 和 Edge 实例
+		child := &Entity{
+			id: entityId,
+		}
+		edge := &Edge{
+			EntityId: entityId,
+			Name:     entityName,
+			ParentId: e.id,
+		}
+		// 构建 WalkMeta
+		meta := &WalkMeta{
+			Parent:   e,
+			Entity:   child,
+			FullPath: filepath.Join(name, edge.Name),
+			Edge:     edge,
+		}
+		entities = append(entities, *meta)
+
+		// 如果传入的 查找深度 depth 不为0,需要递归查找 孙子 entity 等等
+		if depth != 0 {
+			nDepth := depth
+			if depth != -1 { // 递归深度 -1
+				nDepth -= 1
+			}
+			entities, err = db.children(child, meta.FullPath, nDepth, entities)
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	return entities, nil
+}
+
+// List 按名称列出所有实体 键将是实体的完整路径
+// 根据深度找到所有 名为 name 的 实体
+func (db *Database) List(name string, depth int) Entities {
+	db.mux.RLock()
+	defer db.mux.RUnlock()
+
+	// 获取最上层的名为  name 的实体
+	out := Entities{}
+	e, err := db.get(name)
+	if err != nil {
+		return out
+	}
+
+	// 查找所有子节点
+	children, err := db.children(e, name, depth, nil)
+	if err != nil {
+		return out
+	}
+
+	for _, child := range children {
+		out[child.FullPath] = child.Entity
+	}
+
+	return out
+}
+
+// Id 获取 Entity 实例中的 id
+func (e *Entity) Id() string {
+	return e.id
+}
+
+// Paths 返回按深度排序的路径
+func (es *Entities) Paths() []string {
+	out := make([]string, len(*es))
+	var i int
+	for _, e := range *es {
+		out[i] = e.id
+		i++
+	}
+
+	sortByDepth(out)
+
+	return out
 }
