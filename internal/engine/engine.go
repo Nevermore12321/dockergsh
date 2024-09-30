@@ -87,7 +87,7 @@ func (eng *Engine) Shutdown() {
 		eng.tasks.Wait() // 等待所有 tasks 结束，即 waitGroup 没有 goroutine 运行
 		close(tasksDone) // 关闭 tasksDone channel，表示已经全部关闭
 	}()
-	select { // 如果 5s 还有结束所有的 goroutine，或者 5s 内结束了，直接往下走
+	select { // 如果 5s 还没有结束所有的 goroutine，或者 5s 内结束了，直接往下走
 	case <-time.After(time.Second * 5):
 	case <-tasksDone:
 	}

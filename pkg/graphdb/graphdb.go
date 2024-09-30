@@ -6,6 +6,7 @@ import (
 	"fmt"
 	log "github.com/sirupsen/logrus"
 	"path/filepath"
+	"strings"
 	"sync"
 )
 
@@ -320,4 +321,25 @@ func (es *Entities) Paths() []string {
 	sortByDepth(out)
 
 	return out
+}
+
+// IsNonUniqueNameError 判读是否是重名错误
+func IsNonUniqueNameError(err error) bool {
+	errStr := err.Error()
+	// sqlite 3.7.17-1ubuntu1 returns:
+	// Set failure: Abort due to constraint violation: columns parent_id, name are not unique
+	if strings.HasSuffix(errStr, "name are not unique") {
+		return true
+	}
+	// sqlite-3.8.3-1.fc20 returns:
+	// Set failure: Abort due to constraint violation: UNIQUE constraint failed: edge.parent_id, edge.name
+	if strings.Contains(errStr, "UNIQUE constraint failed") && strings.Contains(errStr, "edge.name") {
+		return true
+	}
+	// sqlite-3.6.20-1.el6 returns:
+	// Set failure: Abort due to constraint violation: constraint failed
+	if strings.HasSuffix(errStr, "constraint failed") {
+		return true
+	}
+	return false
 }

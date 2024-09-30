@@ -5,10 +5,12 @@ import (
 	"github.com/Nevermore12321/dockergsh/internal/daemongsh/execdriver"
 	"github.com/Nevermore12321/dockergsh/internal/daemongsh/execdriver/execdrivers"
 	"github.com/Nevermore12321/dockergsh/internal/daemongsh/graphdriver"
+	"github.com/Nevermore12321/dockergsh/internal/daemongsh/networkdriver/portallocator"
 	"github.com/Nevermore12321/dockergsh/internal/engine"
 	"github.com/Nevermore12321/dockergsh/internal/graph"
 	"github.com/Nevermore12321/dockergsh/internal/utils"
 	"github.com/Nevermore12321/dockergsh/pkg/graphdb"
+	"github.com/Nevermore12321/dockergsh/pkg/namesgenerator"
 	"github.com/Nevermore12321/dockergsh/pkg/networkfs/resolvconf"
 	"github.com/Nevermore12321/dockergsh/pkg/parse/kernel"
 	"github.com/Nevermore12321/dockergsh/pkg/sysinfo"
@@ -356,6 +358,28 @@ func NewDaemongshFromDirectory(config *Config, eng *engine.Engine) (*Daemongsh, 
 		return nil, err
 	}
 
+	// 12. 设置shutdown的处理方法
+	// 当Docker Daemon接收到特定信号，需要执行shutdown操作时，先执行这些处理方法完成善后工作，最终再实现物理意义上的shutdown
+	eng.OnShutdown(func() {
+		// 12.1 运行daemon对象的shutdown函数，做daemon方面的善后工作
+		if err := daemongsh.shutdown(); err != nil {
+			log.Errorf("daemon.shutdown(): %s", err)
+		}
+		// 12.2 通过portallocator.ReleaseAll()，释放所有之前占用的端口资源
+		if err := portallocator.ReleaseAll(); err != nil {
+			log.Errorf("portallocator.ReleaseAll(): %s", err)
+		}
+
+		// 12.3 通过daemon.driver.Cleanup()，通过graphdriver实现unmount所有有关镜像layer的挂载点
+		if err := daemongsh.driver.Cleanup(); err != nil {
+			log.Errorf("daemon.cleanup(): %s", err)
+		}
+
+		// 12.4 通过daemon.containerGraph.Close() 关闭graphdb的连接
+		if err := daemongsh.containerGraph.Close(); err != nil {
+			log.Errorf("daemon.containerGraph.Close(): %s", err)
+		}
+	})
 	return nil, nil
 }
 
@@ -414,6 +438,43 @@ func (daemon *Daemongsh) checkLocalDNS() error {
 	return nil
 }
 
+// todo
+// 由于Docker Daemon的重启不会重启所有重启前运行的容器，故Docker Daemon加载已有容器时，会判断容器之前的状态是否为运行
+// 若是运行状态，会将该容器的状态置为退出，并在内存中的容器对象以及config.json文件中将容器主进程的PID设为0
+func (daemon *Daemongsh) register(container *Container, updateSuffixArray bool) error {
+	return nil
+}
+
+// 通过容器 id 为容器生成一个新的名字
+func (daemon *Daemongsh) generateNewName(id string) (string, error) {
+	var name string
+
+	// 生成新名称，如果重名 retry 6 次，
+	for i := 0; i < 6; i++ {
+		name = namesgenerator.GetRandomName(i)
+		if name[0] != '/' {
+			name = "/" + name
+		}
+
+		// 修改名称，存储入库
+		if _, err := daemon.containerGraph.Set(name, id); err != nil {
+			// 如果不是是名称重复，报错返回，如果重名，重试生成新名称
+			if !graphdb.IsNonUniqueNameError(err) {
+				return "", err
+			}
+			continue
+		}
+		return name, nil
+	}
+
+	// 如果重试6次后，还是重名，则直接使用 id 作为容器名称
+	name = "/" + utilsPackage.TruncateID(id)
+	if _, err := daemon.containerGraph.Set(name, id); err != nil {
+		return "", err
+	}
+	return name, nil
+}
+
 // restore docker daemon 容器时，加载之前已经运行的容器
 func (daemon *Daemongsh) restore() error {
 	var (
@@ -454,7 +515,8 @@ func (daemon *Daemongsh) restore() error {
 	}
 
 	// 从 / 路径开始查找
-	registeredContainers := []*Container{}
+	var registeredContainers []*Container
+	// 加载存储在 graphdb 中的容器
 	if entities := daemon.containerGraph.List("/", -1); entities != nil {
 		for _, p := range entities.Paths() { // 根据深度的大小顺序遍历所有 entity
 			if !DEBUG {
@@ -464,11 +526,6 @@ func (daemon *Daemongsh) restore() error {
 			e := entities[p]
 			// 根据 entity id 找到真正的容器信息
 			if container, ok := containers[e.Id()]; ok {
-				// 为容器生成一个随机的名称
-				container.Name, err = daemon.generateNewName(container.ID)
-				if err != nil {
-					log.Debugf("Setting default id - %s", err)
-				}
 				// 加载容器
 				if err := daemon.register(container, false); err != nil {
 					log.Debugf("Failed to register container %s: %s", container.ID, err)
@@ -477,10 +534,39 @@ func (daemon *Daemongsh) restore() error {
 				// 从 containers 列表中删除，防止后续操作自动生成新的名字
 				delete(containers, e.Id())
 			}
-
 		}
 	}
 
+	// 加载 graphdb 中不存在的容器
+	for _, container := range containers {
+		// 设置一个默认的容器名称
+		container.Name, err = daemon.generateNewName(container.ID)
+		if err != nil {
+			log.Debugf("Setting default id - %s", err)
+		}
+		// 加载容器
+		if err := daemon.register(container, false); err != nil {
+			log.Debugf("Failed to register container %s: %s", container.ID, err)
+		}
+		registeredContainers = append(registeredContainers, container)
+	}
+
+	// 检查 daemon 的 重启策略(restart policy)，也就是默认的启动策略
+	// 如果重启策略是 always，则启动容器
+	// 优先使用 容器 的重启策略，如果没有设置，使用 daemon 的重启策略
+	if daemon.config.AutoRestart {
+		log.Debugf("Restarting containers...")
+		for _, container := range registeredContainers {
+			// todo hostconfig restart
+			fmt.Println(container)
+		}
+	}
+
+	if !DEBUG {
+		log.Infof(": done.")
+	}
+
+	return nil
 }
 
 // 拼出当前id容器的根目录，即 /var/lib/dockergsh/containers/[CONTAINER_ID]

@@ -174,3 +174,13 @@ func CheckLocalDNS(resolvConf []byte) bool {
 	}
 	return true
 }
+
+// TruncateID 截断容器 id 的前 12 位作为容器名称，有可能重复
+func TruncateID(id string) string {
+	shortLen := 12
+	if len(id) < shortLen {
+		shortLen = len(id)
+	}
+
+	return id[:shortLen]
+}

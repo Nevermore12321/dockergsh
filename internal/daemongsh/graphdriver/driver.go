@@ -34,6 +34,7 @@ type Driver interface {
 	Create(id, parent string) error // 创建存储层
 	Remove(id string) error         // 删除存储层
 	Exists(id string) bool          // 判断存储层是否已经存在
+	Cleanup() error
 
 	// todo put get exists status cleanups
 }
