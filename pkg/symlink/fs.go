@@ -84,4 +84,5 @@ func FollowSymlinkInScope(link, root string) (string, error) {
 			}
 		}
 	}
+	return prev, nil
 }

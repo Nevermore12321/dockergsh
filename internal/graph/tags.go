@@ -33,7 +33,7 @@ func NewTagStore(path string, graph *Graph) (*TagStore, error) {
 		return nil, err
 	}
 
-	tagStore := TagStore{
+	tagStore := &TagStore{
 		path:         abspath,
 		graph:        graph,
 		Repositories: make(map[string]Repository),
@@ -49,6 +49,7 @@ func NewTagStore(path string, graph *Graph) (*TagStore, error) {
 	} else if err != nil { // 其他加载错误
 		return nil, err
 	}
+	return tagStore, nil
 }
 
 // 将 TagStore.path 指定的文件内容结构化到 store 实例中

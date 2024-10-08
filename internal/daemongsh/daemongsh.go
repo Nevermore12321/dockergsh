@@ -5,6 +5,7 @@ import (
 	"github.com/Nevermore12321/dockergsh/internal/daemongsh/execdriver"
 	"github.com/Nevermore12321/dockergsh/internal/daemongsh/execdriver/execdrivers"
 	"github.com/Nevermore12321/dockergsh/internal/daemongsh/graphdriver"
+	_ "github.com/Nevermore12321/dockergsh/internal/daemongsh/graphdriver/vfs"
 	"github.com/Nevermore12321/dockergsh/internal/daemongsh/networkdriver/portallocator"
 	"github.com/Nevermore12321/dockergsh/internal/engine"
 	"github.com/Nevermore12321/dockergsh/internal/graph"
@@ -592,6 +593,10 @@ func (daemon *Daemongsh) load(containerID string) (*Container, error) {
 	}
 
 	return container, nil
+}
+
+func (daemon *Daemongsh) shutdown() error {
+	return nil
 }
 
 // 检测内核的版本以及主机处理器类型

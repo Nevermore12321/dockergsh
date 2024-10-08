@@ -2,6 +2,7 @@ package graphdriver
 
 import (
 	"errors"
+	"fmt"
 	"github.com/Nevermore12321/dockergsh/internal/utils"
 	"os"
 	"path"
@@ -39,8 +40,19 @@ type Driver interface {
 	// todo put get exists status cleanups
 }
 
+// 初始化全局变量 drivers
 func init() {
 	drivers = make(map[string]InitFunc)
+}
+
+// Register 注册不同的 driver 到全局变量 drivers 中
+func Register(name string, initFunc InitFunc) error {
+	// 已经注册过
+	if _, exists := drivers[name]; exists {
+		return fmt.Errorf("name already registered %s", name)
+	}
+	drivers[name] = initFunc
+	return nil
 }
 
 // GetDriver 通过 driver 的名称、根路径，获取 graph-driver
