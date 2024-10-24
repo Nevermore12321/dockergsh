@@ -92,7 +92,7 @@ func NewChain(name, bridge string) (*Chain, error) {
 		Bridge: bridge,
 	}
 
-	if err := chain.Prerouting(Add, "-m", "addrtype", "--dst-type", "LOCAL"); err != nil {
+	if err := chain.PreRouting(Add, "-m", "addrtype", "--dst-type", "LOCAL"); err != nil {
 		return nil, fmt.Errorf("failed to inject dockergsh in PREROUTING chain: %s", err)
 	}
 	if err := chain.Output(Add, "-m", "addrtype", "--dst-type", "LOCAL", "!", "--dst", "127.0.0.0/8"); err != nil {
@@ -143,8 +143,8 @@ func (c *Chain) Forward(action Action, ip net.IP, port int, proto, destAddr stri
 	return nil
 }
 
-// Prerouting 向 PREROUTING 规则链中添加/删除规则，默认走 chain.Name，对数据包作路由选择时先应用的规则
-func (c *Chain) Prerouting(action Action, args ...string) error {
+// PreRouting 向 REROUTING 规则链中添加/删除规则，默认走 chain.Name，对数据包作路由选择时先应用的规则
+func (c *Chain) PreRouting(action Action, args ...string) error {
 	a := append(nat, fmt.Sprint(action), "PREROUTING")
 	if len(args) > 0 {
 		a = append(a, args...)
@@ -183,11 +183,11 @@ func (c *Chain) Output(action Action, args ...string) error {
 // Remove 删除 chain
 func (c *Chain) Remove() error {
 	// Ignore errors - This could mean the chains were never set up
-	c.Prerouting(Delete, "-m", "addrtype", "--dst-type", "LOCAL")
+	c.PreRouting(Delete, "-m", "addrtype", "--dst-type", "LOCAL")
 	c.Output(Delete, "-m", "addrtype", "--dst-type", "LOCAL", "!", "--dst", "127.0.0.0/8")
 	c.Output(Delete, "-m", "addrtype", "--dst-type", "LOCAL") // Created in versions <= 0.1.6
 
-	c.Prerouting(Delete)
+	c.PreRouting(Delete)
 	c.Output(Delete)
 
 	Raw("-t", "nat", "-F", c.Name)
@@ -204,6 +204,8 @@ func RemoveExistingChain(name string) error {
 
 // Exists 判断当前 itables 规则是否已经存在，args 表示 iptables 后面跟的参数
 func Exists(args ...string) bool {
+	// -C 选项用于检查一条规则是否已经存在。它不会添加或删除规则，只是查看指定的规则是否已经在防火墙中配置。
+	// 如果规则存在，命令返回 0（成功）；如果规则不存在，返回 1（失败）。
 	if _, err := Raw(append([]string{"-C"}, args...)...); err != nil {
 		return false
 	}
@@ -218,6 +220,8 @@ func Raw(args ...string) ([]byte, error) {
 		return nil, ErrIptablesNotFound
 	}
 
+	// --wait 选项用于防止 iptables 在规则集被其他命令修改时退出。在规则集被锁定时，iptables 将等待锁定解除，而不是立即退出。
+	// 这对于防止多线程或多进程修改 iptables 时发生竞争条件很有用
 	if supportsXlock {
 		args = append([]string{"--wait"}, args...)
 	}
@@ -228,6 +232,7 @@ func Raw(args ...string) ([]byte, error) {
 	}
 
 	// 执行 iptables 命令
+	fmt.Println(args)
 	output, err := exec.Command(path, args...).CombinedOutput()
 	if err != nil {
 		return nil, fmt.Errorf("iptables failed: iptables %v: %s (%s)", strings.Join(args, " "), output, err)

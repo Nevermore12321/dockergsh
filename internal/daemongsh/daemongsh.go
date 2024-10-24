@@ -297,7 +297,7 @@ func NewDaemongshFromDirectory(config *Config, eng *engine.Engine) (*Daemongsh, 
 	// 7. 寻找 dockergshinit 的二进制文件
 	// 当我们找到合适的 dockergshinit 二进制文件（即使它是本地二进制文件）时，将其复制到 localCopy 的 config.Root 中以供将来使用（这样原始文件就可以消失而不会出现问题，例如在软件包升级期间）
 	// 路径为/var/lib/dockergsh/init/dockergshinit-[VERSION]
-	localPath := path.Join(config.Root, "init", fmt.Sprint("dockergsh-%s", utils.VERSION))
+	localPath := path.Join(config.Root, "init", fmt.Sprintf("dockergsh-%s", utils.VERSION))
 	sysInitPath := utilsPackage.DockergshInitPath(localPath)
 	if sysInitPath == "" {
 		return nil, fmt.Errorf("could not locate dockergshinit: This usually means docker was built incorrectly")

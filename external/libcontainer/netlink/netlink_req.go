@@ -156,7 +156,7 @@ type NetlinkRequest struct {
 func newNetlinkRequest(proto, flags int) *NetlinkRequest {
 	return &NetlinkRequest{
 		NlMsghdr: syscall.NlMsghdr{
-			Len:   uint32(syscall.NLA_HDRLEN), // 此时初始化的是 header 的长度
+			Len:   uint32(syscall.NLMSG_HDRLEN), // 此时初始化的是 header 的长度
 			Type:  uint16(proto),
 			Flags: syscall.NLM_F_REQUEST | uint16(flags),
 			Seq:   atomic.AddUint32(&nextSeqNr, 1), // 每次请求都有一个 Seq 序号
@@ -312,7 +312,7 @@ func (a *RtAttr) ToWireFormat() []byte {
 	}
 
 	// 长度写入 0,1 位置
-	if l := uint16(length); l > 0 {
+	if l := uint16(length); l != 0 {
 		native.PutUint16(buf[0:2], l)
 	}
 	native.PutUint16(buf[2:4], a.Type)

@@ -82,6 +82,7 @@ func cmdDaemonFlags() []cli.Flag {
 		},
 		&cli.StringFlag{
 			Name:  "ip",
+			Value: "0.0.0.0",
 			Usage: "Default IP address to use when binding container port",
 		},
 		&cli.StringFlag{

@@ -163,7 +163,7 @@ func CreateBridge(name string, setMacAddr bool) error {
 	//	- 第一个参数d指定一个由open/socket创建的文件描述符，即socket套接字
 	//	- 第二个参数request指定操作的类型，即对该文件描述符执行何种操作，设备相关的请求的代码
 	//	- 第三个参数为一块内存区域，通常依赖于request指定的操作类型
-	if _, _, err = syscall.Syscall(syscall.SYS_IOCTL, uintptr(s), SIOC_BRADDBR, uintptr(unsafe.Pointer(nameBytePtr))); err != nil {
+	if _, _, err := syscall.Syscall(syscall.SYS_IOCTL, uintptr(s), SIOC_BRADDBR, uintptr(unsafe.Pointer(nameBytePtr))); err != 0 {
 		return err
 	}
 
@@ -228,8 +228,7 @@ func setMacAddress(name, add string) error {
 	}
 
 	// syscall.SIOCSIFHWADDR ioctl 函数的设置mac地址功能
-	_, _, err = syscall.Syscall(syscall.SYS_IOCTL, uintptr(s), syscall.SIOCSIFHWADDR, uintptr(unsafe.Pointer(&ifr)))
-	if err != nil {
+	if _, _, err := syscall.Syscall(syscall.SYS_IOCTL, uintptr(s), syscall.SIOCSIFHWADDR, uintptr(unsafe.Pointer(&ifr))); err != 0 {
 		return err
 	}
 	return nil

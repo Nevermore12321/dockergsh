@@ -306,7 +306,7 @@ func setupIptables(addr net.Addr, icc bool) error {
 			}
 		}
 	} else { // 允许容器间通信
-		// 县删除 drop 规则
+		// 先删除 drop 规则
 		iptables.Raw(append([]string{"-D"}, dropArgs...)...)
 
 		// 添加 accept 规则
