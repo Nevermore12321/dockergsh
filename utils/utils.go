@@ -11,7 +11,7 @@ import (
 	"path/filepath"
 )
 
-// DockerInitPath 找出 dockergshinit 的路径
+// DockergshInitPath 找出 dockergshinit 的路径
 func DockergshInitPath(localCopy string) string {
 	// 先判断可执行文件的路径，是否满足 hash
 	selfPath := SelfPath()
