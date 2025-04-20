@@ -7,6 +7,7 @@ builtins 是 Docker Daemon运行过程中，注册的一些任务（Jobs）
 */
 
 import (
+	apiserver "github.com/Nevermore12321/dockergsh/internal/api_server"
 	"github.com/Nevermore12321/dockergsh/internal/daemongsh/networkdriver/bridge"
 	"github.com/Nevermore12321/dockergsh/internal/engine"
 )
@@ -52,10 +53,9 @@ func daemon(eng *engine.Engine) error {
 // 1. ServeApi执行时，通过循环多种指定协议，创建出goroutine来配置指定的http.Server，最终为不同协议的请求服务（也就是 server 接收请求）
 // 2. AcceptConnections的作用主要是：通知宿主机上init守护进程Docker Daemon已经启动完毕，可以让Docker Daemon开始服务API请求
 func remote(eng *engine.Engine) error {
-	// todo
-	//if err := eng.Register("serveapi", apiserver.ServeApi); err != nil {
-	//	return err
-	//}
+	if err := eng.Register("serveapi", apiserver.ServeApi); err != nil {
+		return err
+	}
 
 	//return eng.Register("acceptconnections", apiserver.AcceptConnections)
 	return nil
