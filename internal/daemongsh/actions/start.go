@@ -95,17 +95,17 @@ func mainDaemon(context *cli.Context, hosts []string) {
 	// 8.1 hosts 为 Dockergsh Daemon提供使用的协议与监听的地址
 	job := eng.Job("serveapi", hosts...)
 	// 8.2 设置环境变量
-	job.SetEnvBool(utils.Logging, true)
-	job.SetEnvBool(utils.EnableCors, context.Bool("api-enable-cors"))
-	job.SetEnv(utils.Version, utils.VERSION)
-	job.SetEnv(utils.SocketGroup, context.String("socket-group"))
+	job.SetEnvBool(utils.Logging, true)                               // 是否开启日志
+	job.SetEnvBool(utils.EnableCors, context.Bool("api-enable-cors")) // 是否允许跨域
+	job.SetEnv(utils.Version, utils.VERSION)                          // dockergsh 版本号
+	job.SetEnv(utils.SocketGroup, context.String("socket-group"))     // dockergsh daemon 模式中分配用户组名
 
-	job.SetEnvBool(utils.Tls, context.Bool("tls"))
-	job.SetEnvBool(utils.TlsVerify, context.Bool("tls-verify"))
-	job.SetEnv(utils.TlsCa, context.String("tls-cacert"))
-	job.SetEnv(utils.TlsCert, context.String("tls-cert"))
-	job.SetEnv(utils.TlsKey, context.String("tls-key"))
-	job.SetEnvBool(utils.BufferRequests, true)
+	job.SetEnvBool(utils.Tls, context.Bool("tls"))              // 开启 TLS
+	job.SetEnvBool(utils.TlsVerify, context.Bool("tls-verify")) // 是否验证远程客户端
+	job.SetEnv(utils.TlsCa, context.String("tls-cacert"))       // 指定 ca 文件
+	job.SetEnv(utils.TlsCert, context.String("tls-cert"))       // 指定证书文件
+	job.SetEnv(utils.TlsKey, context.String("tls-key"))         // 指定密钥文件
+	job.SetEnvBool(utils.BufferRequests, true)                  // 是否缓存 client 请求
 
 	// 8.3 运行 job
 	if err := job.Run(); err != nil {
