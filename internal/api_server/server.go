@@ -8,6 +8,7 @@ import (
 	"github.com/Nevermore12321/dockergsh/pkg/listenbuffer"
 	log "github.com/sirupsen/logrus"
 	"net"
+	"net/http"
 	"os"
 	"strings"
 	"syscall"
@@ -58,7 +59,7 @@ func ServeApi(job *engine.Job) engine.Status {
 	return engine.StatusOk
 }
 
-// ListenAndServe 创建Listener。Listener是一种面向流协议的通用网络监听模块
+// ListenAndServe 基于特定协议（tcp、unix）启动 HTTP or HTTPS 服务.
 func ListenAndServe(proto, addr string, job *engine.Job) error {
 	var listener net.Listener
 	router, err := createRouter(job.Eng, job.GetEnvBool("Logging"), job.GetEnvBool("EnableCors"), job.GetEnv("Version"))
@@ -139,12 +140,22 @@ func ListenAndServe(proto, addr string, job *engine.Job) error {
 	case "unix":
 		socketGroup := job.GetEnv("SocketGroup")
 		if socketGroup != "" {
-
+			if err := changeGroup(addr, socketGroup); err != nil {
+				return err
+			} else {
+				log.Debugf("Warning: couldn't change group of socket %s to %s.", addr, socketGroup)
+			}
 		}
 		if err := os.Chmod(addr, 0660); err != nil {
 			return err
 		}
 	default:
-		return fmt.Errorf("Invalid protocol format.")
+		return fmt.Errorf("invalid protocol format")
 	}
+
+	httpSrv := http.Server{
+		Addr: addr,
+		Handler: router,
+	}
+	return httpSrv.Serve(listener)
 }
