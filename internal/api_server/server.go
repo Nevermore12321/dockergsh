@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/Nevermore12321/dockergsh/internal/engine"
 	"github.com/Nevermore12321/dockergsh/pkg/listenbuffer"
+	"github.com/Nevermore12321/dockergsh/pkg/systemd"
 	log "github.com/sirupsen/logrus"
 	"net"
 	"net/http"
@@ -19,6 +20,40 @@ var (
 )
 
 // Docker Server支持的协议包括以下三种：TCP协议、UNIX Socket形式以及fd的形式
+
+// ServeFd 通过文件启动 socker 监听服务
+func ServeFd(addr string, handler http.Handler) error {
+	listeners, err := systemd.ListenFd(addr)
+	if err != nil {
+		return err
+	}
+
+	// 所有需要监听 socket goroutine 错误信息
+	chErrors := make(chan error, len(listeners))
+
+	// 在 daemon 还没有初始化、安装之前，并不想启动监听服务
+	// 阻塞等待
+	<-activationLock
+
+	// 如果 listener 返回多个，说明需要监听多个 socket，启动 goroutine
+	for i := range listeners {
+		listener := listeners[i]
+		go func() {
+			log.Info("Listening for HTTP on fd %s", listener.Addr().String())
+			httpSrv := http.Server{Handler: handler}
+			chErrors <- httpSrv.Serve(listener)
+		}()
+	}
+
+	// 等待所有 goroutine 结束
+	for i := 0; i < len(listeners); i++ {
+		err := <-chErrors
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
 
 // ServeApi dockergsh api-server 启动，args 是监听的 host 地址
 func ServeApi(job *engine.Job) engine.Status {
@@ -70,7 +105,7 @@ func ListenAndServe(proto, addr string, job *engine.Job) error {
 	// 根据监听的协议类型启动 server
 	if proto == "fd" {
 		// 若协议为fd形式，则直接通过ServeFd来服务请求
-		return serveFd(addr, router)
+		return ServeFd(addr, router)
 	}
 
 	var oldmask int // 文件打开的默认权限
@@ -84,7 +119,7 @@ func ListenAndServe(proto, addr string, job *engine.Job) error {
 
 	// 如果需要缓存 request
 	if job.GetEnvBool("BufferRequests") {
-		listener, err = listenbuffer.NewListenBuffer(proto, addr, activationLock).
+		listener, err = listenbuffer.NewListenBuffer(proto, addr, activationLock)
 	} else {
 		listener, err = net.Listen(proto, addr)
 	}
@@ -134,7 +169,7 @@ func ListenAndServe(proto, addr string, job *engine.Job) error {
 	// 参数校验
 	switch proto {
 	case "tcp":
-		if !strings.HasPrefix(addr, "127.0.0.1")  && job.GetEnvBool("TlsVerify") {
+		if !strings.HasPrefix(addr, "127.0.0.1") && job.GetEnvBool("TlsVerify") {
 			log.Infof("/!\\ DON'T BIND ON ANOTHER IP ADDRESS THAN 127.0.0.1 IF YOU DON'T KNOW WHAT YOU'RE DOING /!\\")
 		}
 	case "unix":
@@ -154,7 +189,7 @@ func ListenAndServe(proto, addr string, job *engine.Job) error {
 	}
 
 	httpSrv := http.Server{
-		Addr: addr,
+		Addr:    addr,
 		Handler: router,
 	}
 	return httpSrv.Serve(listener)
