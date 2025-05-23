@@ -79,7 +79,7 @@ func ServeApi(job *engine.Job) engine.Status {
 			return job.Errorf("invalid address format: %s, usage: %s PROTO://ADDR [PROTO://ADDR ...]", addr, job.Name)
 		}
 		go func() {
-			log.Info("Listening for HTTP on %s (%s)", protoAddrParts[0], protoAddrParts[1])
+			log.Infof("Listening for HTTP on %s (%s)", protoAddrParts[0], protoAddrParts[1])
 			chError <- ListenAndServe(protoAddrParts[0], protoAddrParts[1], job)
 		}()
 	}
@@ -193,4 +193,20 @@ func ListenAndServe(proto, addr string, job *engine.Job) error {
 		Handler: router,
 	}
 	return httpSrv.Serve(listener)
+}
+
+func AcceptConnections(job *engine.Job) engine.Status {
+	// 发送 ready 信号
+	//go func() {
+	//	err := systemd.SendNotify("READY=1")
+	//	if err != nil {
+	//		log.Errorf("failed to send READY=1: %v", err)
+	//	}
+	//}()
+
+	// 如果 activation channel 不为空， 关闭，表示已经可以接收请求
+	if activationLock != nil {
+		close(activationLock)
+	}
+	return engine.StatusOk
 }

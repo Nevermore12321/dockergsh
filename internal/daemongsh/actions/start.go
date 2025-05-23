@@ -13,7 +13,6 @@ import (
 	"github.com/urfave/cli/v2"
 	"os"
 	"strings"
-	"time"
 )
 
 var (
@@ -89,9 +88,6 @@ func mainDaemon(context *cli.Context, hosts []string) {
 		daemonCfg.GraphDriver,
 	)
 
-	time.Sleep(100000 * time.Second)
-
-	//8）serveapi的创建与运行。
 	// 8.1 hosts 为 Dockergsh Daemon提供使用的协议与监听的地址
 	job := eng.Job("serveapi", hosts...)
 	// 8.2 设置环境变量

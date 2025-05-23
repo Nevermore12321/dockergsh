@@ -65,7 +65,7 @@ func cmdCommonFlags() []cli.Flag {
 			Value: filepath.Join(utils.DockergshCertPath, utils.DefaultKeyFile),
 		},
 		&cli.StringSliceFlag{
-			Name:  "host",
+			Name:  "hosts",
 			Usage: "The socket(s) to bind to in daemon mode\nspecified using one or more tcp://host:port, unix:///path/to/socket, fd://* or fd://socketfd.\n Or, the address to connection to daemon(only one addr).",
 		},
 	}

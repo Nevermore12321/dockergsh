@@ -16,7 +16,6 @@ func Initial(name string, in io.Reader, out, err io.Writer) {
 		RootCmd.Reader = in
 	}
 	if out != nil {
-
 		RootCmd.Writer = out
 	}
 	if err != nil {

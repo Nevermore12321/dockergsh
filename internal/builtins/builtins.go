@@ -57,8 +57,7 @@ func remote(eng *engine.Engine) error {
 		return err
 	}
 
-	//return eng.Register("acceptconnections", apiserver.AcceptConnections)
-	return nil
+	return eng.Register("acceptconnections", apiserver.AcceptConnections)
 }
 
 // 名为 `version` Job 的处理函数 handler

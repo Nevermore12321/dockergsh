@@ -22,7 +22,7 @@ type SysInfo struct {
 
 func New(quiet bool) *SysInfo {
 	sysInfo := &SysInfo{}
-	if cgroupMemoryMountPoint, err := cgroups.FindCgroupMountPoint("memory"); err != nil {
+	if cgroupMemoryMountPoint, err := cgroups.GetCgroupPath("memory"); err != nil {
 		if !quiet {
 			log.Warnf("WARNING: Failed to find memory mount point: %s", err)
 		}
@@ -35,9 +35,14 @@ func New(quiet bool) *SysInfo {
 			_, err2 = os.ReadFile(filepath.Join(cgroupMemoryMountPoint, "memory.soft_limit_in_bytes"))
 			_, err3 = os.ReadFile(filepath.Join(cgroupMemoryMountPoint, "memory.memsw.limit_in_bytes"))
 		case "CgroupV2":
-			_, err1 = os.ReadFile(filepath.Join(cgroupMemoryMountPoint, "memory.max"))
-			_, err2 = os.ReadFile(filepath.Join(cgroupMemoryMountPoint, "memory.low"))
-			_, err3 = os.ReadFile(filepath.Join(cgroupMemoryMountPoint, "memory.swap.max"))
+			cgroupBasePath, err := cgroups.GetCgroupPath("")
+			if err != nil {
+				log.Warnf("WARNING: Failed to find cgroup base path: %s", err)
+				break
+			}
+			_, err1 = os.ReadFile(filepath.Join(cgroupBasePath, "memory.max"))
+			_, err2 = os.ReadFile(filepath.Join(cgroupBasePath, "memory.low"))
+			_, err3 = os.ReadFile(filepath.Join(cgroupBasePath, "memory.swap.max"))
 		}
 		sysInfo.MemoryLimit = err1 == nil && err2 == nil
 		if !sysInfo.MemoryLimit && !quiet {

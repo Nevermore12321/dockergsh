@@ -8,12 +8,12 @@ import (
 	"github.com/Nevermore12321/dockergsh/external/libcontainer/cgroups/v2"
 )
 
-func FindCgroupMountPoint(name string) (string, error) {
+func GetCgroupPath(name string) (string, error) {
 	switch Version {
 	case "CgroupV1":
-		return v1.FindCgroupMountPoint(name)
+		return v1.GetCgroupPath(name, true)
 	case "CgroupV2":
-		return v2.FindCgroupMountPoint(name)
+		return v2.GetCgroupPath(name, true)
 	default:
 		return "", fmt.Errorf("unsupported cgroup version %q", Version)
 	}
