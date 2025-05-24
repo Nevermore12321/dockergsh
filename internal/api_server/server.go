@@ -64,7 +64,7 @@ func ServeApi(job *engine.Job) engine.Status {
 
 	var (
 		protoAddrs = job.Args                          // 传入参数
-		chError    = make(chan error, len(protoAddrs)) // 返回错误 channal，开启了几种协议的 server，就需要有多长的错误 channel
+		chErrors   = make(chan error, len(protoAddrs)) // 返回错误 channal，开启了几种协议的 server，就需要有多长的错误 channel
 	)
 
 	// serveapi运行时，ServeFd和ListenAndServe函数均由于activationLock中没有内容而阻塞，
@@ -80,12 +80,12 @@ func ServeApi(job *engine.Job) engine.Status {
 		}
 		go func() {
 			log.Infof("Listening for HTTP on %s (%s)", protoAddrParts[0], protoAddrParts[1])
-			chError <- ListenAndServe(protoAddrParts[0], protoAddrParts[1], job)
+			chErrors <- ListenAndServe(protoAddrParts[0], protoAddrParts[1], job)
 		}()
 	}
 
-	for i := 0; i < len(protoAddrs); i++ {
-		err := <-chError
+	for i := 0; i < len(protoAddrs); i += 1 {
+		err := <-chErrors
 		if err != nil {
 			return job.Error(err)
 		}
@@ -187,12 +187,12 @@ func ListenAndServe(proto, addr string, job *engine.Job) error {
 	default:
 		return fmt.Errorf("invalid protocol format")
 	}
-
 	httpSrv := http.Server{
 		Addr:    addr,
 		Handler: router,
 	}
-	return httpSrv.Serve(listener)
+	err = httpSrv.Serve(listener)
+	return err
 }
 
 func AcceptConnections(job *engine.Job) engine.Status {
@@ -203,7 +203,6 @@ func AcceptConnections(job *engine.Job) engine.Status {
 	//		log.Errorf("failed to send READY=1: %v", err)
 	//	}
 	//}()
-
 	// 如果 activation channel 不为空， 关闭，表示已经可以接收请求
 	if activationLock != nil {
 		close(activationLock)
