@@ -8,6 +8,10 @@ import (
 	"os"
 )
 
+var (
+	Client *DockerGshClient
+)
+
 // DockerGshClient dockergsh client
 type DockerGshClient struct {
 	proto      string               // c/s 之间通信的协议，unix，tcp，fd

@@ -73,3 +73,17 @@ func ParseHost(addr, defaultHost, defaultUnix string) (string, error) {
 	}
 	return fmt.Sprintf("%s://%s:%d", proto, host, port), nil
 }
+
+// ParseRepositoryTag 通过镜像url解析出镜像的仓库地址和 tag
+func ParseRepositoryTag(repos string) (string, string) {
+	// 找到最后一个冒号的位置，冒号后就是 tag，如果没有设置，那么默认 latest
+	n := strings.LastIndex(repos, ":")
+	if n < 0 {
+		return repos, "latest"
+	}
+
+	if tag := repos[n+1:]; !strings.Contains(tag, "/") {
+		return repos[:n], tag
+	}
+	return repos, "latest"
+}

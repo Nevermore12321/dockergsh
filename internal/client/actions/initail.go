@@ -1,7 +1,6 @@
 package actions
 
 import (
-	"fmt"
 	"github.com/Nevermore12321/dockergsh/internal/utils"
 	"github.com/urfave/cli/v2"
 	"os"
@@ -24,8 +23,7 @@ func CmdClientInitial(context *cli.Context) error {
 
 	// 初始化 dockergshclient
 	// 创建Docker Client实例。
-	// todo client 使用全局变量
-	client := client.NewDockergshClient(context.App.Reader, context.App.Writer, context.App.ErrWriter, protohost[0], protohost[1], tlsConfig)
-	fmt.Println(client)
+	// client 使用全局变
+	client.Client = client.NewDockergshClient(context.App.Reader, context.App.Writer, context.App.ErrWriter, protohost[0], protohost[1], tlsConfig)
 	return nil
 }

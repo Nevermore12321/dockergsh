@@ -270,11 +270,17 @@ func NewDaemongshFromDirectory(config *Config, eng *engine.Engine) (*Daemongsh, 
 		netJob := eng.Job("init_networkdriver")
 
 		// 设置环境变量
+		// 确保Docker Daemon启动时，能对宿主机上的iptables规则进行修改。
 		netJob.SetEnvBool("EnableIptables", config.EnableIptables)
+		// 确保Docker容器之间可以完成通信，通过防火墙完成
 		netJob.SetEnvBool("InterContainerCommunication", config.InterContainerCommunication)
+		// 确保net.ipv4.ip_forward功能开启，使得宿主机在多网络接口模式下，数据包可以在网络接口之间转发
 		netJob.SetEnvBool("EnableIpForward", config.EnableIpForward)
+		// 为Docker网络环境指定具体的通信网桥，若BridgeIface的值为none，则说明不需要为Docker容器创建网桥服务，关闭Docker容器的网络能力
 		netJob.SetEnv("BridgeIface", config.BridgeIface)
+		// Docker Daemon为网络环境中的网桥配置的CIDR网络地址。
 		netJob.SetEnv("BridgeIp", config.BridgeIp)
+		// 绑定Docker容器的端口与宿主机上的某一个端口时，将DefaultIp作为默认使用的宿主机IP地址
 		netJob.SetEnv("DefaultBindingIp", config.DefaultIp.String())
 
 		// 运行 init_networkdriver job，其实就是用来创建 docker0 网桥
