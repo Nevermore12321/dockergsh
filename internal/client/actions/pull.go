@@ -2,8 +2,10 @@ package actions
 
 import (
 	"errors"
+	"github.com/Nevermore12321/dockergsh/internal/client"
 	"github.com/Nevermore12321/dockergsh/internal/registry"
 	"github.com/Nevermore12321/dockergsh/pkg/parse"
+	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 	"net/url"
 )
@@ -50,5 +52,14 @@ func CmdPull(context *cli.Context) error {
 		return err
 	}
 
+	// 3. 加载配置文件
+	dockerClient := client.Client
+	err = dockerClient.LoadConfigFile()
+	if err != nil {
+		log.Warnf("load config file error %v", err)
+	}
+
+	// 从配置信息中，匹配当前使用的仓库地址，获取对应的认证信息
+	authConfig := dockerClient.ConfigFile.ResolveAuthConfig(hostname)
 	return nil
 }

@@ -2,6 +2,7 @@ package client
 
 import (
 	"crypto/tls"
+	"fmt"
 	"github.com/Nevermore12321/dockergsh/internal/registry"
 	"github.com/Nevermore12321/dockergsh/pkg/terminal"
 	"io"
@@ -21,7 +22,7 @@ type DockerGshClient struct {
 	in         io.Reader            // input interface
 	out        io.Writer            // out interface
 	err        io.Writer            // error interface
-	configFile *registry.ConfigFile // 仓库配置信息
+	ConfigFile *registry.ConfigFile // 仓库配置信息
 	isTerminal bool                 // 终端模式开关
 	terminalFd uintptr              // 终端模式文件句柄
 }
@@ -64,4 +65,14 @@ func NewDockergshClient(in io.Reader, out, err io.Writer, proto, addr string, tl
 		scheme:     scheme,
 	}
 
+}
+
+// LoadConfigFile 加载仓库鉴权配置信息
+func (client *DockerGshClient) LoadConfigFile() error {
+	var err error
+	client.ConfigFile, err = registry.LoadConfig(os.Getenv("HOME"))
+	if err != nil {
+		fmt.Fprintf(client.err, "WARNING: %s\n", err)
+	}
+	return nil
 }
