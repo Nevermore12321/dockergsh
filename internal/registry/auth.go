@@ -120,7 +120,38 @@ func decodeAuth(authStr string) (string, string, error) {
 	return authArr[0], password, nil
 }
 
+// ResolveAuthConfig 根据仓库的url解析 hostname
 func (configFile *ConfigFile) ResolveAuthConfig(hostName string) AuthConfig {
-	authConfig := AuthConfig{}
-	return authConfig
+	// 如果是默认的仓库地址
+	if hostName == IndexServerAddress() {
+		return configFile.Configs[IndexServerAddress()]
+	}
+
+	// 如果之前 LoadConfig 中配置了该仓库的登陆信息
+	if c, ok := configFile.Configs[hostName]; ok {
+		return c
+	}
+
+	// 将 url 解析出 hostname
+	convertToHostname := func(url string) string {
+		stripped := url
+		if strings.HasPrefix(url, "http://") {
+			stripped = strings.Replace(url, "http://", "", 1)
+		}
+
+		if strings.HasPrefix(url, "https://") {
+			stripped = strings.Replace(url, "https://", "", 1)
+		}
+
+		nameParts := strings.SplitN(stripped, "/", 2)
+		return nameParts[0]
+	}
+
+	normalizedHostename := convertToHostname(hostName)
+	for registry, config := range configFile.Configs {
+		if registryName := convertToHostname(registry); normalizedHostename == registryName {
+			return config
+		}
+	}
+	return AuthConfig{}
 }

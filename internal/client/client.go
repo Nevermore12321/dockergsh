@@ -19,8 +19,8 @@ type DockerGshClient struct {
 	addr       string               // server 端的地址
 	scheme     string               // http or https
 	tlsConfig  *tls.Config          // tls 配置
-	in         io.Reader            // input interface
-	out        io.Writer            // out interface
+	In         io.Reader            // input interface
+	Out        io.Writer            // out interface
 	err        io.Writer            // error interface
 	ConfigFile *registry.ConfigFile // 仓库配置信息
 	isTerminal bool                 // 终端模式开关
@@ -56,8 +56,8 @@ func NewDockergshClient(in io.Reader, out, err io.Writer, proto, addr string, tl
 	return &DockerGshClient{
 		proto:      proto,
 		addr:       addr,
-		in:         in,
-		out:        out,
+		In:         in,
+		Out:        out,
 		err:        err,
 		isTerminal: isTerminal,
 		terminalFd: terminalFd,
