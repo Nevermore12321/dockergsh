@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"encoding/binary"
 	"errors"
 	log "github.com/sirupsen/logrus"
 	"io"
@@ -9,12 +10,24 @@ import (
 const (
 	StdWriterPrefixLen = 8 // header 总长度
 	StdWriterFdIndex   = 0 // 第一个字节标识输出类型
+	StdWriterSizeIndex = 4 // header 第 5~8 字节：4 字节大端整数，payload 长度
 )
 
 var ErrInvalidStdHeader = errors.New("unrecognized input header")
 
 // StdCopy 是io.copy的修改版本
 // StdCopy 用于处理 多路复用（multiplexed）输出流，将写入`dstout'和`dsterr'。
+/*
++------+----+----+----+----+----+----+----+----+------------------+
+| Fd   |          Frame Size (uint32 big-endian)                | Payload (N bytes) |
++------+----+----+----+----+----+----+----+----+------------------+
+1 byte     4 bytes (total frame size, excluding header)          N bytes
+
+Fd：0 表示 stdin（不常见），1 表示 stdout，2 表示 stderr。
+Size：payload 的长度。
+Payload：数据内容。
+*/
+// 例如 [1][0 0 0 5]['H' 'e' 'l' 'l' 'o']
 func StdCopy(dstout, dsterr io.Writer, src io.Reader) (int64, error) {
 	var (
 		written int64
@@ -60,6 +73,52 @@ func StdCopy(dstout, dsterr io.Writer, src io.Reader) (int64, error) {
 			log.Debugf("Error selecting output fd: (%d)", buf[StdWriterFdIndex])
 			return 0, ErrInvalidStdHeader
 		}
-		// todo
+		// buf[0] 决定是 stdout 还是 stderr
+		// buf[4:8] 是 payload 长度（4 字节 big-endian）
+		frameSize := int(binary.BigEndian.Uint32(buf[StdWriterSizeIndex : StdWriterSizeIndex+4]))
+		log.Debugf("frameSize: %v", frameSize)
+
+		// 检查缓冲区是否足够大以读取框架，否则扩容
+		if frameSize+StdWriterPrefixLen > bufLen {
+			log.Debugf("Extending buffer cap by %d (was %d)", frameSize+StdWriterPrefixLen-bufLen+1, len(buf))
+			buf = append(buf, make([]byte, frameSize+StdWriterPrefixLen-bufLen)...)
+			bufLen = len(buf)
+		}
+
+		// 读取完整的 frame（header + payload）
+		for nr < frameSize+StdWriterPrefixLen {
+			var nr2 int
+			nr2, er = src.Read(buf[nr:])
+			nr += nr2
+			if er == io.EOF {
+				if nr < frameSize+StdWriterPrefixLen {
+					log.Debugf("Corrupted frame: %v", buf[StdWriterPrefixLen:nr])
+					return written, nil
+				}
+				break
+			}
+			if er != nil {
+				log.Debugf("Error reading frame: %s", er)
+				return 0, err
+			}
+		}
+
+		// 写入 payload 到对应的输出（stdout/stderr）
+		nw, ew = out.Write(buf[StdWriterPrefixLen : frameSize+StdWriterPrefixLen])
+		if ew != nil {
+			log.Debugf("Error writing frame: %s", ew)
+			return 0, ew
+		}
+
+		if nw != frameSize {
+			log.Debugf("Error Short Write: (%d on %d)", nw, frameSize)
+			return 0, io.ErrShortWrite
+		}
+		written += int64(nw)
+
+		// 移动 buffer（类似 ring buffer）
+		copy(buf, buf[frameSize+StdWriterPrefixLen:])
+		// 减去这次读走的部分，更新 nr
+		nr -= frameSize + StdWriterPrefixLen
 	}
 }

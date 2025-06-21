@@ -3,7 +3,6 @@ package actions
 import (
 	"encoding/base64"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"github.com/Nevermore12321/dockergsh/internal/client"
 	"github.com/Nevermore12321/dockergsh/internal/registry"
@@ -11,23 +10,11 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 	"net/url"
-	"os"
 	"strings"
 )
 
-var (
-	ErrCmdFormat = errors.New("the format of the command you entered is incorrect. Please use -h to check usage")
-)
-
-func CmdPullFlags() []cli.Flag {
-	return []cli.Flag{
-		&cli.StringFlag{
-			Name:    "pidfile",
-			Aliases: []string{"p"},
-			Value:   "/var/run/dockergsh.pid",
-			Usage:   "Path to use for daemon PID file",
-		},
-	}
+func CmdPullDescription() string {
+	return "Pull an image or a repository from the registry"
 }
 
 // CmdPull 解析参数 docker pull NAME[：TAG]
@@ -87,7 +74,7 @@ func CmdPull(context *cli.Context) error {
 		if strings.Contains(err.Error(), "Status 401") {
 			fmt.Fprintln(dockerClient.Out, "\nPlease login prior to pull:")
 			// 先尝试登陆
-			if err := dockerClient.CmdLogin(hostname); err != nil {
+			if err := CmdLogin(context); err != nil {
 				return err
 			}
 			// 重试

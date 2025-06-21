@@ -2,7 +2,7 @@ package root
 
 import (
 	"fmt"
-	clintActions "github.com/Nevermore12321/dockergsh/internal/client/actions"
+	clientActions "github.com/Nevermore12321/dockergsh/internal/client/actions"
 	daemonActions "github.com/Nevermore12321/dockergsh/internal/daemongsh/actions"
 	"github.com/urfave/cli/v2"
 )
@@ -17,13 +17,20 @@ func initSubCmd(root *cli.App) {
 		&cli.Command{
 			Name:   "client",
 			Usage:  GetHelpUsage("client"),
-			Before: clintActions.CmdClientInitial,
-			Flags:  clintActions.CmdPullFlags(),
+			Before: clientActions.CmdClientInitial,
 			Subcommands: cli.Commands{
 				{
-					Name:   "pull",
-					Usage:  GetHelpUsage("client"),
-					Action: clintActions.CmdPull,
+					Name:        "pull",
+					Usage:       GetHelpUsage("client"),
+					Action:      clientActions.CmdPull,
+					Description: clientActions.CmdPullDescription(),
+				},
+				{
+					Name:        "login",
+					Usage:       GetHelpUsage("client"),
+					Flags:       clientActions.CmdLoginFlags(),
+					Action:      clientActions.CmdLogin,
+					Description: clientActions.CmdLoginDescription(),
 				},
 			},
 		},
