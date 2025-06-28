@@ -23,8 +23,8 @@ type DockerGshClient struct {
 	Out        io.Writer            // out interface
 	err        io.Writer            // error interface
 	ConfigFile *registry.ConfigFile // 仓库配置信息
-	isTerminal bool                 // 终端模式开关
-	terminalFd uintptr              // 终端模式文件句柄
+	IsTerminal bool                 // 终端模式开关
+	TerminalFd uintptr              // 终端模式文件句柄
 }
 
 func NewDockergshClient(in io.Reader, out, err io.Writer, proto, addr string, tlsConf *tls.Config) *DockerGshClient {
