@@ -114,8 +114,36 @@ func CmdLogin(context *cli.Context) error {
 			}
 		}
 
-		// todo
+		if email == "" {
+			promptDefault("Email", authConfig.Email)
+			email = readInput(dockergshClient.In, dockergshClient.Out)
+			if email == "" {
+				email = authConfig.Email
+			}
+		}
+	} else {
+		password = authConfig.Password
+		email = authConfig.Email
 	}
 
+	// 重新设置 用户名密码
+	authConfig.Username = username
+	authConfig.Password = password
+	authConfig.Email = email
+	authConfig.ServerAddress = serverAddress
+	dockergshClient.ConfigFile.Configs[serverAddress] = authConfig
+
+	// 发送 auth 请求
+	stream, statueCode, err := dockergshClient.Call("POST", "/auth", dockergshClient.ConfigFile.Configs[serverAddress], false)
+	if err != nil {
+		return err
+	}
+
+	// 如果报错 401 , 从配置文件中删除配置信息
+	if statueCode == 401 {
+		delete(dockergshClient.ConfigFile.Configs, serverAddress)
+		registry.SaveConfig(dockergshClient.configFile)
+		return err
+	}
 	// todo
 }
