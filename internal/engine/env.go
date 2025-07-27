@@ -2,7 +2,9 @@ package engine
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
+	"strconv"
 	"strings"
 )
 
@@ -26,6 +28,10 @@ func (env Env) Map() map[string]string {
 // Set 统一设置 key=value 环境变量，都是 string 类型，格式为 key=value 列表
 func (env *Env) Set(key, value string) {
 	*env = append(*env, key+"="+value)
+}
+
+func (env *Env) SetInt64(key string, value int64) {
+	env.Set(key, strconv.FormatInt(value, 10))
 }
 
 func (env *Env) Get(key string) (value string) {
@@ -91,6 +97,30 @@ func (env *Env) Encode(dst io.Writer) error {
 	return nil
 }
 
+// Decode 将 src 中的数据转成 env 的 map
+func (env *Env) Decode(src io.Reader) error {
+	m := make(map[string]interface{})
+	if err := json.NewDecoder(src).Decode(&m); err != nil {
+		return err
+	}
+	for k, v := range m {
+		env.SetAuto(k, v)
+	}
+	return nil
+}
+
+func (env *Env) SetAuto(key string, value interface{}) {
+	if fval, ok := value.(float64); ok {
+		env.SetInt64(key, int64(fval))
+	} else if sval, ok := value.(string); ok {
+		env.Set(key, sval)
+	} else if val, err := json.Marshal(value); err == nil {
+		env.Set(key, string(val))
+	} else {
+		env.Set(key, fmt.Sprintf("%v", value))
+	}
+}
+
 func changeFloats(v interface{}) interface{} {
 	switch v := v.(type) {
 	case float64:
@@ -105,4 +135,23 @@ func changeFloats(v interface{}) interface{} {
 		}
 	}
 	return v
+}
+
+// Decoder 自定义的 json decode
+type Decoder struct {
+	*json.Decoder
+}
+
+func (decoder *Decoder) Decode() (*Env, error) {
+	m := make(map[string]interface{})
+	if err := decoder.Decoder.Decode(&m); err != nil {
+		return nil, err
+	}
+
+	env := &Env{}
+	for k, v := range m {
+		env.SetAuto(k, v)
+	}
+
+	return env, nil
 }

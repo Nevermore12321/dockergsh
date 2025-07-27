@@ -20,6 +20,7 @@ import (
 
 var (
 	ErrConnectionRefused = errors.New("cannot connect to the Docker daemon. Is 'docker -d' running on this host")
+)
 
 func (cli *DockerGshClient) HttpClient() *http.Client {
 	transport := &http.Transport{
@@ -89,7 +90,7 @@ func (cli *DockerGshClient) streamHelper(method, path string, setRawTerminal boo
 
 	// 解析响应，如果时 json 格式，记录日志
 	if MatchesContentType(resp.Header.Get("Content-Type"), "application/json") {
-		return utils.DisplayJSONMessagesStream(resp.Body, stdout, cli.terminalFd, cli.isTerminal)
+		return utils.DisplayJSONMessagesStream(resp.Body, stdout, cli.TerminalFd, cli.IsTerminal)
 	}
 
 	// 否则，如果 setRawTerminal 打开，则拷贝

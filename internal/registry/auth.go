@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 )
@@ -94,6 +95,46 @@ func LoadConfig(rootPath string) (*ConfigFile, error) {
 	}
 
 	return configFile, nil
+}
+
+// SaveConfig 保存 auth config 到文件
+func SaveConfig(configFile *ConfigFile) error {
+	confFile := path.Join(configFile.rootPath, CONFIGFILE)
+	// 如果 configFile 中的 Configs 配置项为0, 直接删除配置文件
+	if len(configFile.Configs) == 0 {
+		_ = os.Remove(confFile)
+		return nil
+	}
+
+	configs := make(map[string]AuthConfig, len(configFile.Configs))
+	for k, authConfig := range configFile.Configs {
+		authCopy := authConfig
+
+		authCopy.Auth = encodeAuth(&authCopy)
+		authCopy.Username = ""
+		authCopy.Password = ""
+		authCopy.ServerAddress = ""
+		configs[k] = authCopy
+	}
+
+	b, err := json.Marshal(configs)
+	if err != nil {
+		return err
+	}
+
+	err = os.WriteFile(confFile, b, 0600)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func encodeAuth(authConfig *AuthConfig) string {
+	authStr := authConfig.Username + ":" + authConfig.Password
+	msg := []byte(authStr)
+	encoded := make([]byte, base64.StdEncoding.EncodedLen(len(msg)))
+	base64.StdEncoding.Encode(encoded, msg)
+	return string(encoded)
 }
 
 func decodeAuth(authStr string) (string, string, error) {

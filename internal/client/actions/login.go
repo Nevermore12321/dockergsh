@@ -4,12 +4,12 @@ import (
 	"bufio"
 	"fmt"
 	"github.com/Nevermore12321/dockergsh/internal/client"
+	"github.com/Nevermore12321/dockergsh/internal/engine"
 	"github.com/Nevermore12321/dockergsh/internal/registry"
 	"github.com/Nevermore12321/dockergsh/pkg/terminal"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 	"io"
-	"net/url"
 	"os"
 )
 
@@ -142,8 +142,23 @@ func CmdLogin(context *cli.Context) error {
 	// 如果报错 401 , 从配置文件中删除配置信息
 	if statueCode == 401 {
 		delete(dockergshClient.ConfigFile.Configs, serverAddress)
-		registry.SaveConfig(dockergshClient.configFile)
+		registry.SaveConfig(dockergshClient.ConfigFile)
 		return err
 	}
-	// todo
+
+	// 将 auth 请求的响应转成 Env
+	var out2 engine.Env
+	err = out2.Decode(stream)
+	// 如果返回值不正确，重新加载 HOME 下的 auth config
+	if err != nil {
+		dockergshClient.ConfigFile, _ = registry.LoadConfig(os.Getenv("HOME"))
+		return err
+	}
+
+	// 否则，保存正确的 认证信息 到 auth config 文件
+	registry.SaveConfig(dockergshClient.ConfigFile)
+	if out2.Get("status") != "" {
+		fmt.Fprintf(dockergshClient.Out, "%s\n", out2.Get("Status"))
+	}
+	return nil
 }
