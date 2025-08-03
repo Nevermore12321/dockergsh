@@ -21,14 +21,25 @@ func initSubCmd(root *cli.App) {
 			Subcommands: cli.Commands{
 				{
 					Name:        "pull",
-					Usage:       GetHelpUsage("client"),
+					Usage:       GetHelpUsage("pull"),
 					Action:      clientActions.CmdPull,
 					Description: clientActions.CmdPullDescription(),
 				},
 				{
 					Name:        "login",
-					Usage:       GetHelpUsage("client"),
-					Flags:       clientActions.CmdLoginFlags(),
+					Usage:       GetHelpUsage("login"),
+					Action:      clientActions.CmdLogin,
+					Description: clientActions.CmdLoginDescription(),
+				},
+				{
+					Name:        "logout",
+					Usage:       GetHelpUsage("logout"),
+					Action:      clientActions.CmdLogout,
+					Description: clientActions.CmdLogoutDescription(),
+				},
+				{
+					Name:        "run",
+					Usage:       GetHelpUsage("run"),
 					Action:      clientActions.CmdLogin,
 					Description: clientActions.CmdLoginDescription(),
 				},
