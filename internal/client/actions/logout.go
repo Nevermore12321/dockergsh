@@ -25,9 +25,9 @@ func CmdLogout(context *cli.Context) error {
 
 	// 如果配置文件中没有当前仓库地址的认证信息
 	if _, ok := dockergshClient.ConfigFile.Configs[serverAddress]; !ok {
-		fmt.Fprintf(dockergshClient.Out, "Not logged in to %s\n", serverAddress)
+		_, _ = fmt.Fprintf(dockergshClient.Out, "Not logged in to %s\n", serverAddress)
 	} else { // 否则
-		fmt.Fprintf(dockergshClient.Out, "Remove login credentials for %s\n", serverAddress)
+		_, _ = fmt.Fprintf(dockergshClient.Out, "Remove login credentials for %s\n", serverAddress)
 		// 删除相关的认证信息
 		delete(dockergshClient.ConfigFile.Configs, serverAddress)
 
