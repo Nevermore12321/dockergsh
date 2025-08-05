@@ -59,8 +59,8 @@ func NewDockergshClient(in io.Reader, out, err io.Writer, proto, addr string, tl
 		In:         in,
 		Out:        out,
 		err:        err,
-		isTerminal: isTerminal,
-		terminalFd: terminalFd,
+		IsTerminal: isTerminal,
+		TerminalFd: terminalFd,
 		tlsConfig:  tlsConf,
 		scheme:     scheme,
 	}

@@ -2,6 +2,8 @@ package root
 
 import (
 	"fmt"
+	regsitryActions "github.com/Nevermore12321/dockergsh/external/registry/actions"
+	"github.com/Nevermore12321/dockergsh/external/registry/version"
 	clientActions "github.com/Nevermore12321/dockergsh/internal/client/actions"
 	daemonActions "github.com/Nevermore12321/dockergsh/internal/daemongsh/actions"
 	"github.com/urfave/cli/v2"
@@ -54,6 +56,28 @@ func initSubCmd(root *cli.App) {
 					Name:   "start",
 					Usage:  GetHelpUsage("daemon_start"),
 					Action: daemonActions.CmdStart,
+				},
+			},
+		},
+		&cli.Command{
+			Name:        "registry",
+			Usage:       GetHelpUsage("registry"),
+			Flags:       cmdRegistryFlag(),
+			Description: "Start a dockergsh registry server for saving docker images",
+			Action: func(context *cli.Context) error {
+				showVersion := context.Bool("version")
+				if showVersion {
+					version.PrintVersion()
+					return nil
+				}
+				GetHelpUsage("registry")
+			},
+			Subcommands: cli.Commands{
+				{
+					Name:        "serve",
+					Usage:       GetHelpUsage("serve"),
+					Action:      regsitryActions.CmdRegisgtryServe,
+					Description: regsitryActions.CmdServeDescription(),
 				},
 			},
 		},
@@ -145,6 +169,31 @@ func cmdDaemonFlags() []cli.Flag {
 			Aliases: []string{"se"},
 			Value:   false,
 			Usage:   "Enable selinux support. SELinux does not presently support the BTRFS storage driver",
+		},
+	}
+}
+
+func cmdRegistryFlag() []cli.Flag {
+	return []cli.Flag{
+		&cli.BoolFlag{
+			Name:  "dry-run",
+			Value: false,
+			Usage: "do everything except remove the blobs",
+		},
+		&cli.BoolFlag{
+			Name:  "delete-untagged",
+			Value: false,
+			Usage: "delete manifests that are not currently referenced via tag",
+		},
+		&cli.BoolFlag{
+			Name:  "quiet",
+			Value: false,
+			Usage: "silence output",
+		},
+		&cli.BoolFlag{
+			Name:  "version",
+			Value: false,
+			Usage: "show the version and exit",
 		},
 	}
 }
