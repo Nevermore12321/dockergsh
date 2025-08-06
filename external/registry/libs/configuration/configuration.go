@@ -2,8 +2,6 @@ package configuration
 
 import "io"
 
-type Version string
-
 // 配置表，由 yaml 文件解析得到，配置文件中的字段不能使用 _，因为环境使用 _
 type Configuration struct {
 	Version       Version       `yaml:"version"`                 // 定义配置文件格式的版本
@@ -58,7 +56,11 @@ type Validation struct {
 type Policy struct {
 }
 
-// todo
+// Parse 解析配置文件为对象 Configuration
 func Parse(rd io.Reader) (*Configuration, error) {
-	return nil, nil
+	// 读取数据内容
+	in, err := io.ReadAll(rd)
+	if err != nil {
+		return nil, err
+	}
 }
