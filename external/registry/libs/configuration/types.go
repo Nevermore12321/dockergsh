@@ -60,3 +60,40 @@ func (e envVars) Swap(i, j int) {
 func (e envVars) Less(i, j int) bool {
 	return e[i].name < e[j].name
 }
+
+// Parameters 类型定义 key-value 键值对
+type Parameters map[string]interface{}
+
+type Storage map[string]Parameters
+
+// Type 返回存储驱动类型，如filesystem或s3
+func (storage Storage) Type() string {
+	var storageType []string
+
+	// 遍历所有类型
+	for k := range storage {
+		switch k {
+		case "maintenance":
+			// 允许配置为 maintenance
+		case "cache":
+			// 允许配置为 caching
+		case "delete":
+			// 允许配置为 delete
+		case "redirect":
+			// 允许配置为 redirect
+		case "tag":
+			// 允许配置为 tag
+		default:
+			storageType = append(storageType, k)
+		}
+	}
+
+	// 如果配置了多个 storage，报错，只允许配置一个
+	if len(storageType) > 1 {
+		panic("multiple storage drivers specified in configuration or environment: " + strings.Join(storageType, ", "))
+	}
+	if len(storageType) == 1 {
+		return storageType[0]
+	}
+	return ""
+}

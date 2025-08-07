@@ -1,6 +1,13 @@
 package configuration
 
-import "io"
+import (
+	"errors"
+	"fmt"
+	"io"
+	"reflect"
+)
+
+type v0_1Configuration Configuration
 
 // 配置表，由 yaml 文件解析得到，配置文件中的字段不能使用 _，因为环境使用 _
 type Configuration struct {
@@ -21,9 +28,6 @@ type Configuration struct {
 
 // Log 表示应用程序内的日志配置。
 type Log struct {
-}
-
-type Storage struct {
 }
 
 type Auth struct {
@@ -57,10 +61,34 @@ type Policy struct {
 }
 
 // Parse 解析配置文件为对象 Configuration
+// 环境变量可以用来覆盖除版本之外的配置参数，配置方法：Configuration.Abc 可以环境变量 REGISTRY_ABC 替换,
 func Parse(rd io.Reader) (*Configuration, error) {
 	// 读取数据内容
 	in, err := io.ReadAll(rd)
 	if err != nil {
 		return nil, err
 	}
+
+	// 环境变量前缀为 registry
+	parser := NewParser("registry", []VersionedParseInfo{
+		{
+			Version: MajorMinorVersion(0, 1),
+			ParseAs: reflect.TypeOf(v0_1Configuration{}),
+			ConversionFunc: func(c interface{}) (interface{}, error) {
+				if v0_1, ok := c.(*v0_1Configuration); ok {
+					if v0_1.Storage.Type() == "" {
+						return nil, errors.New("no storage configuration provided")
+					}
+				}
+				return nil, fmt.Errorf("expected *v0_1Configuration, received %#v", c)
+			},
+		},
+	})
+	config := new(Configuration)
+	err = parser.Parse(in, config)
+	if err != nil {
+		return nil, err
+	}
+
+	return config, nil
 }
