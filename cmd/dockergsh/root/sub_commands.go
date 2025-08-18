@@ -76,7 +76,7 @@ func initSubCmd(root *cli.App) {
 				{
 					Name:        "serve",
 					Usage:       GetHelpUsage("serve"),
-					Action:      regsitryActions.CmdRegisgtryServe,
+					Action:      regsitryActions.CmdRegistryServe,
 					Description: regsitryActions.CmdServeDescription(),
 				},
 			},
