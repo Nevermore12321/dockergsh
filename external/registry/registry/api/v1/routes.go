@@ -26,8 +26,9 @@ func RouterWithPrefix(prefix string) *mux.Router {
 
 	router.StrictSlash(true)
 
-	for _, descriptor := range routerDescriptors {
-		router.Path()
+	for _, descriptor := range routeDescriptors {
+		router.Path(descriptor.Path).Name(descriptor.Name)
 	}
 
+	return router
 }

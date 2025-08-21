@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/http"
 	"reflect"
 )
 
@@ -37,6 +38,10 @@ type Middleware struct {
 }
 
 type HTTP struct {
+	// 公共响应头
+	Headers http.Header `yaml:"headers,omitempty"`
+	// 可以添加统一前缀
+	Prefix string `yaml:"prefix,omitempty"`
 }
 
 type Notifications struct {
@@ -52,6 +57,8 @@ type Catalog struct {
 }
 
 type Proxy struct {
+	// 其他仓库的代理地址
+	RemoteURL string `yaml:"remoteurl"`
 }
 
 type Validation struct {

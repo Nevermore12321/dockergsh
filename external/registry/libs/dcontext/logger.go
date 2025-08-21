@@ -2,6 +2,7 @@ package dcontext
 
 import (
 	"context"
+	"fmt"
 	"github.com/sirupsen/logrus"
 	"runtime"
 	"sync"
@@ -59,10 +60,10 @@ func getLogrusLogger(ctx context.Context, keys ...interface{}) *logrus.Entry {
 
 	// 自定义的 keys fields 也添加到 logger 中
 	fields := logrus.Fields{}
-	for _, key := keys {
+	for _, key := range keys {
 		val := ctx.Value(key)
 		if val != nil {
-			fields[key] = val
+			fields[fmt.Sprint(key)] = val
 		}
 	}
 
