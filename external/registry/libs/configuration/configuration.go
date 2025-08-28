@@ -42,6 +42,26 @@ type HTTP struct {
 	Headers http.Header `yaml:"headers,omitempty"`
 	// 可以添加统一前缀
 	Prefix string `yaml:"prefix,omitempty"`
+
+	// 接口调试信息，包括pprof, expvar或其他
+	Debug Debug `yaml:"debug,omitempty"`
+}
+
+type Debug struct {
+	// 定义一个 debug server address
+	Addr string `yaml:"addr,omitempty"`
+
+	// Prometheus 配置
+	Prometheus Prometheus `yaml:"prometheus,omitempty"`
+}
+
+// Prometheus 配置 prometheus 的注册端点
+type Prometheus struct {
+	// 是否开启
+	Enabled bool `yaml:"enabled,omitempty"`
+
+	// Prometheus' metrics 的 path 路径，默认是 "/metrics".
+	Path string `yaml:"path,omitempty"`
 }
 
 type Notifications struct {

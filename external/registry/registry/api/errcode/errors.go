@@ -23,3 +23,24 @@ type ErrorDescriptor struct {
 	// http 状态码
 	HTTPStatusCode int
 }
+
+type Errors []error
+
+func (errs Errors) Len() int {
+	return len(errs)
+}
+
+func (errs Errors) Error() string {
+	switch len(errs) {
+	case 0:
+		return "<nil>"
+	case 1:
+		return errs[0].Error()
+	default:
+		msg := "errors: \n"
+		for _, err := range errs {
+			msg += err.Error() + "\n"
+		}
+		return msg
+	}
+}
