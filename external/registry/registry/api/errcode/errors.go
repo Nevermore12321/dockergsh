@@ -1,10 +1,36 @@
 package errcode
 
+import (
+	"strings"
+)
+
 type ErrorCoder interface {
 	ErrorCode() ErrorCode
 }
 
 type ErrorCode int
+
+func (ec ErrorCode) ErrorCode() ErrorCode {
+	return ec
+}
+
+func (ec ErrorCode) String() string {
+	return ec.Descriptor().Value
+}
+
+func (ec ErrorCode) Error() string {
+	return strings.ToLower(strings.Replace(ec.String(), "_", " ", -1))
+}
+
+func (ec ErrorCode) Descriptor() ErrorDescriptor {
+	d, ok := errorCodeToDescriptors[ec]
+
+	if !ok {
+		return ErrorCodeUnknown.Descriptor()
+	}
+
+	return d
+}
 
 // ErrorDescriptor 提供 error 的详细信息
 type ErrorDescriptor struct {
@@ -44,3 +70,13 @@ func (errs Errors) Error() string {
 		return msg
 	}
 }
+
+//type Error struct {
+//	Code    ErrorCode   `json:"code"`
+//	Message string      `json:"message"`
+//	Detail  interface{} `json:"detail,omitempty"`
+//}
+//
+//func (e Error) Error() string {
+//	return fmt.Sprintf("%s: %s", e.Code.Error(), e.Message)
+//}

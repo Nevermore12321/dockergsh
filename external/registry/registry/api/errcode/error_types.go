@@ -16,4 +16,13 @@ var (
 		service too many times`,
 		HTTPStatusCode: http.StatusTooManyRequests,
 	})
+
+	// ErrorCodeUnknown 未知错误
+	ErrorCodeUnknown = register("errcode", ErrorDescriptor{
+		Value:   "UNKNOWN",
+		Message: "unknown error",
+		Description: `Generic error returned when the error does not have an
+			                                            API classification.`,
+		HTTPStatusCode: http.StatusInternalServerError,
+	})
 )

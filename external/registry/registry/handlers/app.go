@@ -65,6 +65,19 @@ func (app *App) register(routeName string, dispatchFunc dispatchFunc) {
 	app.Router.GetRoute(routeName).Handler(handler)
 }
 
+func (app *App) logError(ctx context.Context, errors errcode.Errors) {
+	for _, err := range errors {
+		var c context.Context
+
+		switch e := err.(type) {
+		case errcode.Error:
+			c = context.WithValue(ctx, errCodeKey{}, e.Code)
+			c = context.WithValue(c, errMessageKey{}, e.Message)
+			c = context.WithValue(c, errDetailKey{}, e.Detail)
+		}
+	}
+}
+
 // 生成真正的 http handler
 func (app *App) dispatcher(dispatchFunc2 dispatchFunc) http.Handler {
 	return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
@@ -79,8 +92,11 @@ func (app *App) dispatcher(dispatchFunc2 dispatchFunc) http.Handler {
 
 		// 自动处理 错误，返回 错误 response
 		defer func() {
-			if ctx.Errors.Len() > 0 {
-				_ = errcode.ServeJson()
+			if ctx.Errors.Len() > 0 { // 有错误时，返回错误，并打印日志
+				_ = errcode.ServeJson(writer, ctx.Errors)
+				app.logError(ctx, ctx.Errors)
+			} else if status, ok := ctx.Value("http.response.status").(int); ok && status >= 200 && status < 399 { // 成功，并打印日志
+				dcontext.GetResponseLogger(ctx).Infof("response completed")
 			}
 		}()
 
@@ -110,3 +126,15 @@ func (app *App) context(w http.ResponseWriter, r *http.Request) *Context {
 
 	return reqCtx
 }
+
+type errCodeKey struct{}
+
+func (errCodeKey) String() string { return "err.code" }
+
+type errMessageKey struct{}
+
+func (errMessageKey) String() string { return "err.message" }
+
+type errDetailKey struct{}
+
+func (errDetailKey) String() string { return "err.detail" }
