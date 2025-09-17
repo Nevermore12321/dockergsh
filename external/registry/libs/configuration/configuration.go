@@ -45,6 +45,9 @@ type HTTP struct {
 
 	// 接口调试信息，包括pprof, expvar或其他
 	Debug Debug `yaml:"debug,omitempty"`
+
+	// 指定在 Location headers 中应该返回的相对 url，302 跳转使用
+	RelativeURLs bool `yaml:"relativeurls,omitempty"`
 }
 
 type Debug struct {

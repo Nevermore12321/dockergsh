@@ -16,6 +16,21 @@ var (
 
 type loggerKey struct{}
 type Logger interface {
+	Info(args ...interface{})
+	Infof(format string, args ...interface{})
+	Infoln(args ...interface{})
+
+	Debug(args ...interface{})
+	Debugf(format string, args ...interface{})
+	Debugln(args ...interface{})
+
+	Error(args ...interface{})
+	Errorf(format string, args ...interface{})
+	Errorln(args ...interface{})
+
+	Warn(args ...interface{})
+	Warnf(format string, args ...interface{})
+	Warnln(args ...interface{})
 }
 
 // WithLogger 在 ctx 中添加 logger 属性

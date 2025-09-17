@@ -1,6 +1,7 @@
 package errcode
 
 import (
+	"fmt"
 	"strings"
 )
 
@@ -30,6 +31,10 @@ func (ec ErrorCode) Descriptor() ErrorDescriptor {
 	}
 
 	return d
+}
+
+func (ec ErrorCode) Message() string {
+	return ec.Descriptor().Message
 }
 
 // ErrorDescriptor 提供 error 的详细信息
@@ -71,12 +76,12 @@ func (errs Errors) Error() string {
 	}
 }
 
-//type Error struct {
-//	Code    ErrorCode   `json:"code"`
-//	Message string      `json:"message"`
-//	Detail  interface{} `json:"detail,omitempty"`
-//}
-//
-//func (e Error) Error() string {
-//	return fmt.Sprintf("%s: %s", e.Code.Error(), e.Message)
-//}
+type Error struct {
+	Code    ErrorCode   `json:"code"`
+	Message string      `json:"message"`
+	Detail  interface{} `json:"detail,omitempty"`
+}
+
+func (e Error) Error() string {
+	return fmt.Sprintf("%s: %s", e.Code.Error(), e.Message)
+}

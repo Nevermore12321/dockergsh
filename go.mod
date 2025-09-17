@@ -12,6 +12,7 @@ require (
 	github.com/urfave/cli/v2 v2.11.0
 	github.com/vishvananda/netlink v1.1.0
 	github.com/vishvananda/netns v0.0.0-20191106174202-0a2b9b5464df
+	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (

@@ -7,6 +7,7 @@ import (
 	"github.com/Nevermore12321/dockergsh/external/registry/libs/dcontext"
 	"github.com/Nevermore12321/dockergsh/external/registry/registry/api/errcode"
 	v1 "github.com/Nevermore12321/dockergsh/external/registry/registry/api/v1"
+	"github.com/Nevermore12321/dockergsh/external/registry/registry/auth"
 	"github.com/gorilla/mux"
 	"net/http"
 	"net/url"
@@ -23,6 +24,8 @@ type App struct {
 	httpHost url.URL // 表示 http.Host
 
 	isCahce bool // 是否开启缓存
+
+	accessController auth.AccessController // 鉴权
 	// todo
 }
 
@@ -65,19 +68,6 @@ func (app *App) register(routeName string, dispatchFunc dispatchFunc) {
 	app.Router.GetRoute(routeName).Handler(handler)
 }
 
-func (app *App) logError(ctx context.Context, errors errcode.Errors) {
-	for _, err := range errors {
-		var c context.Context
-
-		switch e := err.(type) {
-		case errcode.Error:
-			c = context.WithValue(ctx, errCodeKey{}, e.Code)
-			c = context.WithValue(c, errMessageKey{}, e.Message)
-			c = context.WithValue(c, errDetailKey{}, e.Detail)
-		}
-	}
-}
-
 // 生成真正的 http handler
 func (app *App) dispatcher(dispatchFunc2 dispatchFunc) http.Handler {
 	return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
@@ -100,31 +90,12 @@ func (app *App) dispatcher(dispatchFunc2 dispatchFunc) http.Handler {
 			}
 		}()
 
+		// 鉴权中间件
+		if err := app.authorized(); err != nil {
+			dcontext.GetLogger(ctx).Warnf("error authorizing context: %v", err)
+			return
+		}
 	})
-}
-
-func (app *App) context(w http.ResponseWriter, r *http.Request) *Context {
-	ctx := r.Context()
-	ctx = dcontext.WithVars(ctx, r)
-	ctx = dcontext.WithLogger(ctx, dcontext.GetLogger(ctx,
-		"vars.name",
-		"vars.reference",
-		"vars.digest",
-		"vars.uuid",
-	))
-
-	reqCtx := &Context{
-		App:     app,
-		Context: ctx,
-	}
-
-	if app.httpHost.Scheme != "" && app.httpHost.Host != "" {
-		reqCtx.urlBuilder = v1.NewURLBuilder(&app.httpHost, false)
-	} else {
-		reqCtx.urlBuilder = v1.NewURLBuilderFromRequest(r, app.Config.HTTP.RelativeURLs)
-	}
-
-	return reqCtx
 }
 
 type errCodeKey struct{}
