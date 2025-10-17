@@ -97,3 +97,7 @@ func (storage Storage) Type() string {
 	}
 	return ""
 }
+
+func (storage Storage) Parameters() Parameters {
+	return storage[storage.Type()]
+}

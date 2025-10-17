@@ -8,9 +8,12 @@ import (
 	"github.com/Nevermore12321/dockergsh/external/registry/registry/api/errcode"
 	v1 "github.com/Nevermore12321/dockergsh/external/registry/registry/api/v1"
 	"github.com/Nevermore12321/dockergsh/external/registry/registry/auth"
+	storageDriver "github.com/Nevermore12321/dockergsh/external/registry/storage/driver"
+	"github.com/Nevermore12321/dockergsh/external/registry/version"
 	"github.com/gorilla/mux"
 	"net/http"
 	"net/url"
+	"runtime"
 )
 
 //	App是一个全局注册应用对象。可以放置共享资源。所有请求都可以访问这个对象。
@@ -26,6 +29,8 @@ type App struct {
 	isCahce bool // 是否开启缓存
 
 	accessController auth.AccessController // 鉴权
+	driver           storageDriver.StorageDriver
+
 	// todo
 }
 
@@ -41,6 +46,20 @@ func NewApp(ctx context.Context, config *configuration.Configuration) *App {
 	app.register(v1.RouteNameBase, func(ctx *Context, r *http.Request) http.Handler {
 		return http.HandlerFunc(apiBase)
 	})
+
+	// 覆盖从 registry 出去的 http 请求的 storage driver
+	storageParams := config.Storage.Parameters()
+	if storageParams == nil {
+		storageParams = make(configuration.Parameters)
+	}
+	if storageParams["useragent"] == "" {
+		storageParams["useragent"] = fmt.Sprintf("distribution/%s %s", version.Version(), runtime.Version())
+	}
+	// todo
+	//var err error
+	//app.driver = factory
+
+	return app
 }
 
 // 返回简单的 /v1/ ，返回空

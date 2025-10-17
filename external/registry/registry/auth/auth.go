@@ -27,3 +27,11 @@ type Grant struct {
 type AccessController interface {
 	Authorized(r *http.Request, access ...Access) (*Grant, error)
 }
+
+// Challenge 是一种特殊的错误类型，用于 HTTP 401 未经授权的响应，并且能够根据错误编写带有WWW-Authenticate header 的响应。
+type Challenge interface {
+	error
+
+	// SetHeaders 当遇到 401 错误时，可以使用此方法对响应添加响应的 header
+	SetHeaders(r *http.Request, w http.ResponseWriter)
+}

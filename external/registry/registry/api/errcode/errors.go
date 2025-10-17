@@ -37,6 +37,13 @@ func (ec ErrorCode) Message() string {
 	return ec.Descriptor().Message
 }
 
+func (ec ErrorCode) WithDetail(detail interface{}) Error {
+	return Error{
+		Code:    ec,
+		Message: ec.Message(),
+	}.WithDetail(detail)
+}
+
 // ErrorDescriptor 提供 error 的详细信息
 type ErrorDescriptor struct {
 	// 该错误描述符的错误码
@@ -84,4 +91,12 @@ type Error struct {
 
 func (e Error) Error() string {
 	return fmt.Sprintf("%s: %s", e.Code.Error(), e.Message)
+}
+
+func (e Error) WithDetail(detail interface{}) Error {
+	return Error{
+		Code:    e.Code,
+		Message: e.Message,
+		Detail:  detail,
+	}
 }

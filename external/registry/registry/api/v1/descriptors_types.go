@@ -7,7 +7,8 @@ import (
 )
 
 const (
-	RouteNameBase = "base"
+	RouteNameBase    = "base"
+	RouteNameCatalog = "catalog"
 )
 
 // RouteDescriptor 定义路由
